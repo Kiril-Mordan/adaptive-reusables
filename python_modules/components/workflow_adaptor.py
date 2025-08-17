@@ -62,10 +62,7 @@ class WorkflowAdaptor:
 
 
     system_message : str = attrs.field(default=None)
-    purpose_description : str = attrs.field(default=None)
-    generated_workflow : str = attrs.field(default=None)
-    workflow_current_state : str = attrs.field(default=None)
-    expected_output_schema : str = attrs.field(default=None)
+    system_message_items : Dict[str, str] = attrs.field(default=None)
     debug_prompt : str = attrs.field(default=None)
     adapt_prompt : str = attrs.field(default=None)
     
@@ -84,10 +81,7 @@ class WorkflowAdaptor:
     def _assign_prompts(self, 
         prompts_filepath : str = None,
         system_message : str = None, 
-        purpose_description : str = None,
-        generated_workflow : str = None,
-        workflow_current_state : str = None,
-        expected_output_schema : str = None,
+        system_message_items : Dict[str,str] = None,
         debug_prompt : str = None,
         adapt_prompt : str = None
         ):
@@ -114,25 +108,10 @@ class WorkflowAdaptor:
         else:
             self.system_message = wa_prompts['system_message']
 
-        if purpose_description: 
-            self.purpose_description = purpose_description
+        if system_message_items:
+            self.system_message_items = system_message_items
         else:
-            self.purpose_description = wa_prompts['purpose_description']
-
-        if workflow_current_state: 
-            self.workflow_current_state = workflow_current_state
-        else:
-            self.workflow_current_state = wa_prompts['workflow_current_state']
-
-        if expected_output_schema: 
-            self.expected_output_schema = expected_output_schema
-        else:
-            self.expected_output_schema = wa_prompts['expected_output_schema']
-
-        if generated_workflow: 
-            self.generated_workflow = generated_workflow
-        else:
-            self.generated_workflow = wa_prompts['generated_workflow']
+            self.system_message_items = wa_prompts.get("system_message_items", {})
 
         if debug_prompt: 
             self.debug_prompt = debug_prompt
@@ -186,7 +165,7 @@ class WorkflowAdaptor:
                 ref_key = parts[2]
                 if ref_key in defs:
                     # Recursively resolve in case the referenced definition has further $ref
-                    return resolve_ref(defs[ref_key], defs)
+                    return self._resolve_ref(defs[ref_key], defs)
         return schema
 
     def _check_reference(self, 
@@ -239,7 +218,7 @@ class WorkflowAdaptor:
         
         source_type = properties[field_name].get("type")
         # Resolve any $ref in the target field schema
-        target_field_schema = resolve_ref(target_field_schema, target_field_schema.get("$defs", {}))
+        target_field_schema = self._resolve_ref(target_field_schema, target_field_schema.get("$defs", {}))
         target_type = target_field_schema.get("type")
         if source_type != target_type:
             reference_errors.append(f"Type mismatch in reference '{reference}': expected target type '{target_type}', got source type '{source_type}'.")
@@ -267,17 +246,17 @@ class WorkflowAdaptor:
         """
         defs = target_schema.get("$defs", {})
         # Resolve $ref in the current schema node, if any.
-        schema = resolve_ref(target_schema, defs)
+        schema = self._resolve_ref(target_schema, defs)
 
         def _check(mapping: Any, schema: Dict[str, Any]) -> List[str]:
             # Resolve references in this schema node
-            schema = resolve_ref(schema, defs)
+            schema = self._resolve_ref(schema, defs)
             errors: List[str] = []
             
             if isinstance(mapping, str):
                 # If the string contains '.output.', it is expected to be a reference.
                 if ".output." in mapping:
-                    errors.extend(check_reference(mapping, schema, state, current_function))
+                    errors.extend(self._check_reference(mapping, schema, state, current_function))
                     return errors
                 else:
                     # For a literal value, we can (optionally) enforce that the schema type is string.
@@ -343,8 +322,8 @@ class WorkflowAdaptor:
             try:
                 mapping_errors = self._check_complex_mapping(mapping = json_output, target_schema = target_schema, state = state, current_function=current_function)
 
-            except Exception:
-                self.logger.debug(".")
+            except Exception as e:
+                self.logger.debug(f"error: {e}")
 
         return json_output, mapping_errors
 
@@ -362,12 +341,25 @@ class WorkflowAdaptor:
 
         if workflow_current_state_schema != {}:
 
+            system_message_items = {}
+
+            if self.system_message_items.get("purpose_description"):
+                system_message_items["purpose_description"] = self.system_message_items.get("purpose_description")
+
+            if self.system_message_items.get("generated_workflow"):
+                system_message_items["generated_workflow"] = self.system_message_items.get("generated_workflow").format(
+                    raw_workflow = json.dumps(workflow))
+
+            if self.system_message_items.get("workflow_current_state"):
+                system_message_items["workflow_current_state"] = self.system_message_items.get("workflow_current_state").format(
+                    workflow_current_state = json.dumps(workflow_current_state_schema))
+
+            if self.system_message_items.get("expected_output_schema"):
+                system_message_items["expected_output_schema"] = self.system_message_items.get("expected_output_schema")
+
             messages = [
                 {"role": "system", "content": self.system_message.format(
-                    purpose_description = self.purpose_description, 
-                    generated_workflow = self.generated_workflow.format(raw_workflow = json.dumps(workflow)),
-                    workflow_current_state = self.workflow_current_state.format(workflow_current_state = json.dumps(workflow_current_state_schema)),
-                    expected_output_schema = self.expected_output_schema)},
+                    **system_message_items)},
                 {"role": "user", "content": self.adapt_prompt.format(
                     selected_function_name = func_name,
                     selected_function_input_schema = json.dumps(selected_function_input_schema))}

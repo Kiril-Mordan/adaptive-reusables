@@ -83,9 +83,7 @@ class WorkflowPlanner:
 
 
     system_message : str = attrs.field(default=None)
-    purpose_description : str = attrs.field(default=None)
-    expected_output_schema : str = attrs.field(default=None)
-    function_call_description : str = attrs.field(default=None)
+    system_message_items : Dict[str, str] = attrs.field(default=None)
     debug_prompt : str = attrs.field(default=None)
     plan_prompt : str = attrs.field(default=None)
     
@@ -104,9 +102,7 @@ class WorkflowPlanner:
     def _assign_prompts(self, 
         prompts_filepath : str = None,
         system_message : str = None, 
-        purpose_description : str = None,
-        expected_output_schema : str = None,
-        function_call_description : str = None,
+        system_message_items : Dict[str,str] = None,
         debug_prompt : str = None,
         plan_prompt : str = None
         ):
@@ -127,26 +123,15 @@ class WorkflowPlanner:
             with open(prompts_filepath, 'r') as f:
                 wp_prompts = yaml.safe_load(f)
 
-
         if system_message: 
             self.system_message = system_message
         else:
             self.system_message = wp_prompts['system_message']
 
-        if purpose_description: 
-            self.purpose_description = purpose_description
+        if system_message_items: 
+            self.system_message_items = system_message_items
         else:
-            self.purpose_description = wp_prompts['purpose_description']
-
-        if expected_output_schema: 
-            self.expected_output_schema = expected_output_schema
-        else:
-            self.expected_output_schema = wp_prompts['expected_output_schema']
-
-        if function_call_description: 
-            self.function_call_description = function_call_description
-        else:
-            self.function_call_description = wp_prompts['function_call_description']
+            self.system_message_items = wp_prompts.get("system_message_items", {})
 
         if debug_prompt: 
             self.debug_prompt = debug_prompt
@@ -209,12 +194,21 @@ class WorkflowPlanner:
                 if key in ["name", "description", "input_schema_json", "output_schema_json"]} \
                     for av in available_functions])
 
+        system_message_items = {}
+
+        if self.system_message_items.get("purpose_description"):
+            system_message_items["purpose_description"] = self.system_message_items.get("purpose_description")
+
+        if self.system_message_items.get("expected_output_schema"):
+            system_message_items["expected_output_schema"] = self.system_message_items.get("expected_output_schema")
+
+        if self.system_message_items.get("function_call_description"):
+            system_message_items["function_call_description"] = self.system_message_items.get("function_call_description").format(
+                available_functions = available_functions_json)
+
         messages = [
         {"role": "system", "content": self.system_message.format(
-            purpose_description = self.purpose_description, 
-            expected_output_schema = self.expected_output_schema,
-            function_call_description = self.function_call_description.format(
-                available_functions = available_functions_json))},
+            **system_message_items)},
         {"role": "user", "content": task_description}
         ]
 

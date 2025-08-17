@@ -127,12 +127,16 @@ class InputCollector:
         Otherwise, it is a literal.
         """
         # Pattern matches if "source:" or ".output." appears anywhere in the string.
-        if re.search(r"(source:|\.output\.)", value):
+        if (value is not None) and (re.search(r"(source:|\.output\.)", value)):
             return "reference"
         return "literal"
 
     def fix_literal_values(self, planned_workflow : dict, adapted_workflow : dict):
 
+        """
+        Replaces inputs that suppose to be literal in llm adapted workflow
+        based on planned workflow.
+        """
 
         og_leaves = self._extract_leaf_paths(planned_workflow)
         mod_leaves = self._extract_leaf_paths(adapted_workflow)

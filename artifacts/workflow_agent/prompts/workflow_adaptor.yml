@@ -32,18 +32,19 @@ system_message_items:
   expected_output_schema: >
     ## Output Requirements
 
-    Generate a valid JSON object that maps the inputs for the selected function. 
+    Generate a valid JSON object that maps the inputs for the selected function id. 
     For any input that should be derived from a previous step's output, reference the source using this format: <function_identifier>.output.<field_name>.
+    Do not use function names as <function_identifier>, but instead use 'id' from generated workflow.
     If a literal value is already valid for an input (for example, "Berlin" for the city), do not convert it to a reference.
     Your response must consist solely of the JSON object with no extra text, explanations, or markdown formatting.
 
     For instance, if the required mapping is:
 
     {
-      "input_field_1": "functionA.output.fieldX",
+      "input_field_1": "id_1.output.fieldX",
       "input_field_2": "literal_value",
       "input_field_3": [
-        {"subfield": "functionB.output.fieldY"}
+        {"subfield": "id_2.output.fieldY"}
       ]
     }
 

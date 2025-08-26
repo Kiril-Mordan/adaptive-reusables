@@ -77,6 +77,7 @@ class WorkflowAdaptor:
     def __attrs_post_init__(self):
 
         self._assign_prompts()
+        self._initialize_input_collector_h()
 
     def _assign_prompts(self, 
         prompts_filepath : str = None,
@@ -172,6 +173,7 @@ class WorkflowAdaptor:
         reference: str, 
         target_field_schema: Dict[str, Any], 
         state: Dict[str, Dict[str, Any]], 
+        id_func_mapping : Dict[str, str],
         current_function: str) -> List[str]:
         """
         Validate that a reference string is valid.
@@ -192,14 +194,14 @@ class WorkflowAdaptor:
             reference_errors.append(f"Reference '{reference}' should not include a prefix like 'source:' or 'string:'.")
             return reference_errors
 
-        pattern = r"^(?P<func_name>[^.]+)\.output\.(?P<field_name>[^.]+)$"
+        pattern = r"^(?P<func_id>[^.]+)\.output\.(?P<field_name>[^.]+)$"
         match = re.fullmatch(pattern, reference)
         
         if not match:
             reference_errors.append(f"Invalid reference format: {reference}")
             return reference_errors
         
-        func_name = match.group("func_name")
+        func_name = id_func_mapping.get(match.group("func_id"), "")
         field_name = match.group("field_name")
         
         if func_name == current_function:
@@ -230,6 +232,7 @@ class WorkflowAdaptor:
         mapping: Any, 
         target_schema: Dict[str, Any],
         state: Dict[str, Dict[str, Any]], 
+        id_func_mapping : Dict[str,str],
         current_function: str) -> List[str]:
         """
         Recursively validate a mapping object against the target JSON schema (which may include $ref)
@@ -256,7 +259,12 @@ class WorkflowAdaptor:
             if isinstance(mapping, str):
                 # If the string contains '.output.', it is expected to be a reference.
                 if ".output." in mapping:
-                    errors.extend(self._check_reference(mapping, schema, state, current_function))
+                    errors.extend(self._check_reference(
+                        reference = mapping, 
+                        target_field_schema = schema, 
+                        state = state,
+                        id_func_mapping = id_func_mapping,
+                        current_function = current_function))
                     return errors
                 else:
                     # For a literal value, we can (optionally) enforce that the schema type is string.
@@ -313,6 +321,7 @@ class WorkflowAdaptor:
         llm_response : str, 
         target_schema : dict, 
         state : dict, 
+        id_func_mapping : Dict[str,str],
         current_function : str):
 
         json_output = self._read_json_output(output=llm_response)
@@ -320,7 +329,12 @@ class WorkflowAdaptor:
 
         if json_output:
             try:
-                mapping_errors = self._check_complex_mapping(mapping = json_output, target_schema = target_schema, state = state, current_function=current_function)
+                mapping_errors = self._check_complex_mapping(
+                    mapping = json_output, 
+                    target_schema = target_schema, 
+                    state = state, 
+                    id_func_mapping = id_func_mapping,
+                    current_function=current_function)
 
             except Exception as e:
                 self.logger.debug(f"error: {e}")
@@ -333,6 +347,7 @@ class WorkflowAdaptor:
         workflow : dict,
         workflow_current_state_schema : dict,
         available_functions : list,
+        id_func_mapping : Dict[str,str],
         max_retry : int = 5):
 
 
@@ -379,14 +394,19 @@ class WorkflowAdaptor:
                     ]
                     mapping_errors = []
 
+                    self.logger.debug(messages)
+
                 
                 response = await self.llm_h.chat(messages)
                 llm_response = response['message']['content']
                 
+                self.logger.debug(llm_response)
+
                 json_output, mapping_errors = self._check_adapt_schema(
                     llm_response=llm_response, 
                     target_schema = selected_function_input_schema,
                     state=workflow_current_state_schema,
+                    id_func_mapping=id_func_mapping,
                     current_function=func_name)
 
                 not_json_output = mapping_errors != []
@@ -402,6 +422,12 @@ class WorkflowAdaptor:
 
         return json_output
 
+    def _add_fcall_ids(self, workflow: dict) -> dict:
+
+        wf = [{"id" : idx + 1, **d} for idx, d in enumerate(workflow)]
+        id_func_mapping = {str(idx + 1) : d['name'] for idx, d in enumerate(workflow)}
+        return wf, id_func_mapping
+
     async def adapt_workflow(
         self,
         workflow : dict,
@@ -415,8 +441,10 @@ class WorkflowAdaptor:
         if max_retry is None:
             max_retry = self.max_retry
 
+        id_workflow, id_func_mapping = self._add_fcall_ids(workflow=workflow)
+
         workflow_current_state_schema = {step['name'] : self._make_current_state_schema(
-            workflow = workflow, 
+            workflow = id_workflow, 
             available_functions = available_functions, 
             func_name = step['name']
         ) for step in workflow}
@@ -424,17 +452,18 @@ class WorkflowAdaptor:
         # Create a list of tasks for each workflow step using adapt_func.
         adapt_tasks = [asyncio.create_task(self._adapt_func(
             func_name = step['name'],
-            workflow = workflow,
+            workflow = id_workflow,
             workflow_current_state_schema = workflow_current_state_schema[step['name']],
             available_functions = available_functions,
+            id_func_mapping = id_func_mapping,
             max_retry = max_retry)) \
-            for step in workflow]
+            for step in id_workflow]
         
         # Wait for all tasks to complete and gather their results.
         adapted_inputs = await asyncio.gather(*adapt_tasks)
 
-        adapted_workflow = [{'name' : step['name'], 'args': adapted_input} for step, adapted_input in zip(workflow, adapted_inputs)]
+        adapted_workflow = [{"id" : step['id'], 'name' : step['name'], 'args': adapted_input} for step, adapted_input in zip(id_workflow, adapted_inputs)]
 
         new_workflow = self.input_collector_h.fix_literal_values(workflow, adapted_workflow)
 
-        return new_workflow
+        return adapted_workflow

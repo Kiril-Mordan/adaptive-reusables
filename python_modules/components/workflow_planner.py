@@ -86,8 +86,10 @@ class WorkflowPlanner:
     system_message_items : Dict[str, str] = attrs.field(default=None)
     debug_prompt : str = attrs.field(default=None)
     plan_prompt : str = attrs.field(default=None)
+    plan_prompt_items : Dict[str, str] = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
+    available_functions : List[LlmFunctionItem] = attrs.field(default=None)
 
     max_retry : int = attrs.field(default=5)
 
@@ -103,6 +105,7 @@ class WorkflowPlanner:
         prompts_filepath : str = None,
         system_message : str = None, 
         system_message_items : Dict[str,str] = None,
+        plan_prompt_items : Dict[str, str] = None,
         debug_prompt : str = None,
         plan_prompt : str = None
         ):
@@ -132,6 +135,11 @@ class WorkflowPlanner:
             self.system_message_items = system_message_items
         else:
             self.system_message_items = wp_prompts.get("system_message_items", {})
+
+        if plan_prompt_items: 
+            self.plan_prompt_items = plan_prompt_items
+        else:
+            self.plan_prompt_items = wp_prompts.get("plan_prompt_items", {})
 
         if debug_prompt: 
             self.debug_prompt = debug_prompt
@@ -173,7 +181,8 @@ class WorkflowPlanner:
     async def generate_workflow(
         self,
         task_description : str, 
-        available_functions : List[LlmFunctionItem], 
+        available_functions : List[LlmFunctionItem] = None, 
+        input_model : type(BaseModel) = None,
         max_retry : Optional[int] = None):
 
         """
@@ -189,12 +198,22 @@ class WorkflowPlanner:
         if max_retry is None:
             max_retry = self.max_retry
 
+        if available_functions is None:
+            available_functions = self.available_functions
+
+        if available_functions is None:
+            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
+
         available_functions_json = json.dumps([
             {key:value for key,value in av.model_dump().items() \
                 if key in ["name", "description", "input_schema_json", "output_schema_json"]} \
                     for av in available_functions])
 
-        system_message_items = {}
+        system_message_items = {
+            "purpose_description" : "",
+            "expected_output_schema" : "",
+            "function_call_description" : ""
+        }
 
         if self.system_message_items.get("purpose_description"):
             system_message_items["purpose_description"] = self.system_message_items.get("purpose_description")
@@ -206,10 +225,21 @@ class WorkflowPlanner:
             system_message_items["function_call_description"] = self.system_message_items.get("function_call_description").format(
                 available_functions = available_functions_json)
 
+        user_message_items = {
+            "task_description" : task_description,
+            "input_schema" : "",
+            "output_schema" : ""}
+
+        if input_model is not None and self.plan_prompt_items.get("input_schema") is not None:
+            user_message_items["input_schema"] = self.plan_prompt_items["input_schema"].format(
+                input_model_schema = input_model.model_json_schema())
+
         messages = [
         {"role": "system", "content": self.system_message.format(
             **system_message_items)},
-        {"role": "user", "content": task_description}
+        {"role": "user", "content": self.plan_prompt.format(
+            **user_message_items
+        )}
         ]
 
         response = await self.llm_h.chat(messages)

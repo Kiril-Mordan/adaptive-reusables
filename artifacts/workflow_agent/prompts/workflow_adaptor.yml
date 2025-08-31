@@ -37,6 +37,7 @@ system_message_items:
     Do not use function names as <function_identifier>, but instead use 'id' from generated workflow.
     If a literal value is already valid for an input (for example, "Berlin" for the city), do not convert it to a reference.
     Your response must consist solely of the JSON object with no extra text, explanations, or markdown formatting.
+    The workflow may referance the `input_model` which should be expected under `function_identifier` = 0. 
 
     For instance, if the required mapping is:
 
@@ -49,6 +50,8 @@ system_message_items:
     }
 
     Then your response should include exactly that JSON object and nothing else.
+
+ 
   
 
 adapt_prompt: > 

@@ -67,6 +67,7 @@ class WorkflowAdaptor:
     adapt_prompt : str = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
+    available_functions : List[LlmFunctionItem] = attrs.field(default=None)
 
     max_retry : int = attrs.field(default=5)
 
@@ -138,21 +139,44 @@ class WorkflowAdaptor:
 
         return function_calls
 
-    def _make_current_state_schema(self, workflow : list, available_functions : List[LlmFunctionItem], func_name : str = None):
+    def _make_current_state_schema(self, 
+        workflow : list, 
+        available_functions : List[LlmFunctionItem], 
+        input_model : type(BaseModel) = None,
+        func_name : str = None):
+
+        base_state_schema = {}
+
+        if input_model:
+            base_state_schema['input_model'] = input_model.model_json_schema()
 
         if func_name is None:
-            return {wd['name'] : [ad.output_schema_json for ad in available_functions if ad.name == wd['name']][0] for wd in workflow}
+
+            current_state_schema = {wd['name'] : [ad.output_schema_json \
+                for ad in available_functions \
+                    if ad.name == wd['name']][0] for wd in workflow}
+
+            base_state_schema.update(current_state_schema)
+
+            return base_state_schema
         else:
             current_state_schema = {}
 
             for step in workflow:
 
+                if step['name'] == "input_model":
+                    continue
+
                 if step['name'] != func_name:
-                    current_state_schema[step['name']] = [ad.output_schema_json for ad in available_functions if ad.name == step['name']][0]
+                    current_state_schema[step['name']] = [ad.output_schema_json \
+                        for ad in available_functions \
+                            if ad.name == step['name']][0]
                 else:
                     break
 
-            return current_state_schema
+            base_state_schema.update(current_state_schema)
+
+            return base_state_schema
 
     def _resolve_ref(self, schema: Dict[str, Any], defs: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -356,7 +380,12 @@ class WorkflowAdaptor:
 
         if workflow_current_state_schema != {}:
 
-            system_message_items = {}
+            system_message_items = {
+                "purpose_description" : "",
+                "generated_workflow" : "",
+                "workflow_current_state" : "",
+                "expected_output_schema" : ""
+            }
 
             if self.system_message_items.get("purpose_description"):
                 system_message_items["purpose_description"] = self.system_message_items.get("purpose_description")
@@ -372,12 +401,16 @@ class WorkflowAdaptor:
             if self.system_message_items.get("expected_output_schema"):
                 system_message_items["expected_output_schema"] = self.system_message_items.get("expected_output_schema")
 
+            adapt_message_items = {
+                "selected_function_name" : func_name,
+                "selected_function_input_schema" : json.dumps(selected_function_input_schema)
+            }
+
             messages = [
                 {"role": "system", "content": self.system_message.format(
                     **system_message_items)},
                 {"role": "user", "content": self.adapt_prompt.format(
-                    selected_function_name = func_name,
-                    selected_function_input_schema = json.dumps(selected_function_input_schema))}
+                    **adapt_message_items)}
             ]
 
             retry = 0
@@ -387,21 +420,20 @@ class WorkflowAdaptor:
                 retry += 1
 
                 if mapping_errors:
+                    errors = "\n ".join(iter(mapping_errors))
                     messages += [
                         {"role": "assistant", "content": llm_response},
                         {"role": "user", "content": self.debug_prompt.format(
-                    mapping_errors = "\n ".join(iter(mapping_errors)))}
+                    mapping_errors = errors)}
                     ]
                     mapping_errors = []
 
-                    self.logger.debug(messages)
+                    self.logger.warning(f"Mapping errors: {errors}")
 
                 
                 response = await self.llm_h.chat(messages)
                 llm_response = response['message']['content']
                 
-                self.logger.debug(llm_response)
-
                 json_output, mapping_errors = self._check_adapt_schema(
                     llm_response=llm_response, 
                     target_schema = selected_function_input_schema,
@@ -416,22 +448,32 @@ class WorkflowAdaptor:
                 else:
                     self.logger.debug(llm_response)
         else:
-            self.logger.warning("No input models was provided, llm planner inputs initialize workflow!")
+            #self.logger.warning("No input models was provided, llm planner inputs initialize workflow!")
             json_output = workflow[0]['args']
 
 
         return json_output
 
-    def _add_fcall_ids(self, workflow: dict) -> dict:
+    def _add_fcall_ids(self, 
+            workflow: dict,
+            input_model : type(BaseModel) = None) -> dict:
 
-        wf = [{"id" : idx + 1, **d} for idx, d in enumerate(workflow)]
-        id_func_mapping = {str(idx + 1) : d['name'] for idx, d in enumerate(workflow)}
-        return wf, id_func_mapping
+        wf_base = []
+        id_func_mapping_base = {"0" : "input_model"}
+
+        if input_model:
+            wf_base.append({"id" : 0, "name" : "input_model"})
+
+        wf = wf_base + [{"id" : idx + 1, **d} for idx, d in enumerate(workflow)]
+        id_func_mapping_u = {str(idx + 1) : d['name'] for idx, d in enumerate(workflow)}
+        id_func_mapping_base.update(id_func_mapping_u)
+        return wf, id_func_mapping_base
 
     async def adapt_workflow(
         self,
         workflow : dict,
-        available_functions : List[LlmFunctionItem],
+        available_functions : List[LlmFunctionItem] = None,
+        input_model : type(BaseModel) = None,
         max_retry : Optional[int] = None):
 
         """
@@ -441,11 +483,20 @@ class WorkflowAdaptor:
         if max_retry is None:
             max_retry = self.max_retry
 
-        id_workflow, id_func_mapping = self._add_fcall_ids(workflow=workflow)
+        if available_functions is None:
+            available_functions = self.available_functions
+
+        if available_functions is None:
+            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
+
+        id_workflow, id_func_mapping = self._add_fcall_ids(
+            workflow=workflow,
+            input_model=input_model)
 
         workflow_current_state_schema = {step['name'] : self._make_current_state_schema(
             workflow = id_workflow, 
             available_functions = available_functions, 
+            input_model = input_model,
             func_name = step['name']
         ) for step in workflow}
 
@@ -457,12 +508,17 @@ class WorkflowAdaptor:
             available_functions = available_functions,
             id_func_mapping = id_func_mapping,
             max_retry = max_retry)) \
-            for step in id_workflow]
+            for step in id_workflow if step["name"] != "input_model"]
         
         # Wait for all tasks to complete and gather their results.
         adapted_inputs = await asyncio.gather(*adapt_tasks)
 
-        adapted_workflow = [{"id" : step['id'], 'name' : step['name'], 'args': adapted_input} for step, adapted_input in zip(id_workflow, adapted_inputs)]
+        if input_model:
+            adapted_inputs = [{}] + adapted_inputs
+
+        adapted_workflow = [{"id" : step['id'], 'name' : step['name'], 'args': adapted_input} \
+            for step, adapted_input in zip(id_workflow, adapted_inputs) \
+                if step["name"] != "input_model"]
 
         new_workflow = self.input_collector_h.fix_literal_values(workflow, adapted_workflow)
 

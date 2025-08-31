@@ -52,6 +52,16 @@ plan_prompt: >
 
   {output_schema}
 
+plan_prompt_items: 
+  input_schema : > 
+    ---
+    The following is the expected input model for the workflow, reference values from it if necessesary, given the task with 
+    format "source: input_model.output.<field_name>". 
+
+    {input_model_schema}
+
+    ---
+
 debug_prompt: >
   Your output contains functions that are not available for function calling.
   Pls try again, this time using only provided functions. 

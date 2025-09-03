@@ -143,6 +143,7 @@ class WorkflowAdaptor:
         workflow : list, 
         available_functions : List[LlmFunctionItem], 
         input_model : type(BaseModel) = None,
+        output_model : type(BaseModel) = None,
         func_name : str = None):
 
         base_state_schema = {}
@@ -157,6 +158,9 @@ class WorkflowAdaptor:
                     if ad.name == wd['name']][0] for wd in workflow}
 
             base_state_schema.update(current_state_schema)
+
+            if output_model:
+                base_state_schema['output_model']: output_model.model_json_schema()
 
             return base_state_schema
         else:
@@ -175,6 +179,9 @@ class WorkflowAdaptor:
                     break
 
             base_state_schema.update(current_state_schema)
+
+            if output_model:
+                base_state_schema['output_model']: output_model.model_json_schema()
 
             return base_state_schema
 
@@ -454,9 +461,33 @@ class WorkflowAdaptor:
 
         return json_output
 
+    def _mod_inputs_for_output_model(self, 
+        workflow : List[dict],
+        output_model : type(BaseModel),
+        available_functions : List[LlmFunctionItem],
+        ):
+
+        workflow_s = workflow
+        available_functions_t = available_functions
+        if output_model:
+            workflow_s += [{'id': len(workflow) + 1 , 'name': 'output_model'}]
+            available_functions_t += [LlmFunctionItem(
+                name="output_model", 
+                description="Schema to which relevant workflow outputs should be connected to.",
+                input_schema_json=output_model.model_json_schema(),
+                output_schema_json=output_model.model_json_schema(),
+                input_model=output_model,
+                output_model=output_model
+                )]
+
+        return workflow_s, available_functions_t
+
+
+
     def _add_fcall_ids(self, 
             workflow: dict,
-            input_model : type(BaseModel) = None) -> dict:
+            input_model : type(BaseModel) = None,
+            output_model : type(BaseModel) = None) -> dict:
 
         wf_base = []
         id_func_mapping_base = {"0" : "input_model"}
@@ -467,13 +498,19 @@ class WorkflowAdaptor:
         wf = wf_base + [{"id" : idx + 1, **d} for idx, d in enumerate(workflow)]
         id_func_mapping_u = {str(idx + 1) : d['name'] for idx, d in enumerate(workflow)}
         id_func_mapping_base.update(id_func_mapping_u)
+
+        if output_model:
+            id_func_mapping_base.update({str(len(wf)) : "output_model"})
+            wf.append({"id" : len(wf), "name" : "output_model"})
+
         return wf, id_func_mapping_base
 
     async def adapt_workflow(
         self,
-        workflow : dict,
+        workflow : List[dict],
         available_functions : List[LlmFunctionItem] = None,
         input_model : type(BaseModel) = None,
+        output_model : type(BaseModel) = None,
         max_retry : Optional[int] = None):
 
         """
@@ -491,21 +528,29 @@ class WorkflowAdaptor:
 
         id_workflow, id_func_mapping = self._add_fcall_ids(
             workflow=workflow,
-            input_model=input_model)
+            input_model=input_model,
+            output_model=output_model)
 
+        workflow_s, available_functions_t = self._mod_inputs_for_output_model(
+            workflow=workflow,
+            available_functions=available_functions,
+            output_model=output_model
+        )
+            
         workflow_current_state_schema = {step['name'] : self._make_current_state_schema(
             workflow = id_workflow, 
             available_functions = available_functions, 
             input_model = input_model,
+            output_model=output_model,
             func_name = step['name']
-        ) for step in workflow}
+        ) for step in workflow_s}
 
         # Create a list of tasks for each workflow step using adapt_func.
         adapt_tasks = [asyncio.create_task(self._adapt_func(
             func_name = step['name'],
             workflow = id_workflow,
             workflow_current_state_schema = workflow_current_state_schema[step['name']],
-            available_functions = available_functions,
+            available_functions = available_functions_t,
             id_func_mapping = id_func_mapping,
             max_retry = max_retry)) \
             for step in id_workflow if step["name"] != "input_model"]

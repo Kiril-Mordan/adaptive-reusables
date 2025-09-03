@@ -62,6 +62,15 @@ plan_prompt_items:
 
     ---
 
+  output_schema : > 
+    ---
+    The following is the expected output model for the workflow, outputs from functions selected in the workflow should 
+    be able to populate its fields, given the task with format "source: <previous_workflow_step>.output.<field_name>" or "source: input_model.output.<field_name>". 
+
+    {output_model_schema}
+
+    ---
+
 debug_prompt: >
   Your output contains functions that are not available for function calling.
   Pls try again, this time using only provided functions. 

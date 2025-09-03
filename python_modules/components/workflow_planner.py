@@ -183,6 +183,7 @@ class WorkflowPlanner:
         task_description : str, 
         available_functions : List[LlmFunctionItem] = None, 
         input_model : type(BaseModel) = None,
+        output_model : type(BaseModel) = None,
         max_retry : Optional[int] = None):
 
         """
@@ -233,6 +234,10 @@ class WorkflowPlanner:
         if input_model is not None and self.plan_prompt_items.get("input_schema") is not None:
             user_message_items["input_schema"] = self.plan_prompt_items["input_schema"].format(
                 input_model_schema = input_model.model_json_schema())
+
+        if output_model is not None and self.plan_prompt_items.get("output_schema") is not None:
+            user_message_items["output_schema"] = self.plan_prompt_items["output_schema"].format(
+                output_model_schema = output_model.model_json_schema())
 
         messages = [
         {"role": "system", "content": self.system_message.format(

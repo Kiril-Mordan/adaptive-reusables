@@ -78,6 +78,8 @@ class InputCollector:
                 m = re.match(r'\[(\d+)\](.*)', part)
                 if m:
                     idx = int(m.group(1))
+                    if idx >= len(current):
+                        continue
                     current = current[idx]
                     part = m.group(2)
                 else:
@@ -89,8 +91,12 @@ class InputCollector:
                     m = re.match(r'([^\[]+)(\[(\d+)\])?', part)
                     if m:
                         key = m.group(1)
+                        if current.get(key) is None or type(current) == "list":
+                            continue
                         if m.group(2):
                             idx = int(m.group(3))
+                            if idx >= len(current[key]):
+                                continue
                             current[key][idx] = value
                         else:
                             current[key] = value
@@ -102,9 +108,13 @@ class InputCollector:
                     m = re.match(r'([^\[]+)(\[(\d+)\])?', part)
                     if m:
                         key = m.group(1)
+                        if current.get(key) is None:
+                            continue
                         current = current[key]
                         if m.group(2):
                             idx = int(m.group(3))
+                            if idx >= len(current):
+                                continue
                             current = current[idx]
                 else:
                     continue
@@ -117,7 +127,8 @@ class InputCollector:
         in the workflow is replaced with the new value.
         """
         for path, new_value in zip(leaf_paths, new_values):
-            workflow = self._set_by_path(workflow, path, new_value)
+            if new_value:
+                workflow = self._set_by_path(workflow, path, new_value)
         return workflow
 
     def _classify_value(self, value: str) -> str:
@@ -131,6 +142,15 @@ class InputCollector:
             return "reference"
         return "literal"
 
+    def _get_new_leaf_with_old_key(self, mod_leaves, inputstr):
+
+        new_vals = [olk for olk in list(mod_leaves.keys()) if inputstr in olk]
+        new_val = ""
+        if new_vals:
+            new_val = new_vals[0]
+
+        return new_val
+
     def fix_literal_values(self, planned_workflow : dict, adapted_workflow : dict):
 
         """
@@ -139,7 +159,16 @@ class InputCollector:
         """
 
         og_leaves = self._extract_leaf_paths(planned_workflow)
+        for k,v in og_leaves.items():
+            if v is not None:
+                v = str(v)
+            og_leaves[k] = v
+
         mod_leaves = self._extract_leaf_paths(adapted_workflow)
+        for k,v in mod_leaves.items():
+            if v is not None:
+                v = str(v)
+            mod_leaves[k] = v
 
         self.logger.debug(f"og_leaves : {og_leaves}")
         self.logger.debug(f"mod_leaves : {mod_leaves}")
@@ -149,9 +178,14 @@ class InputCollector:
 
         self.logger.debug(f"ic_results : {ic_results}")
 
-        new_values = [mod_leaves[[olk for olk in list(mod_leaves.keys()) \
-            if inputstr in olk][0]] if cl == 'reference' else og_leaves[inputstr] \
-                for inputstr, cl in zip(og_leaves, ic_results)]
+        new_values = [mod_leaves.get(self._get_new_leaf_with_old_key(
+            mod_leaves = mod_leaves, inputstr = inputstr), None) if cl == 'reference' else og_leaves[inputstr] \
+                for inputstr, cl, mv in zip(og_leaves, ic_results, mod_leaves)]
+
+        self.logger.debug(f"new_values : {new_values}")
+
+        if len(mod_leaves) > len(og_leaves):
+            new_values += [None for _ in range(len(mod_leaves) - len(og_leaves))]
 
         leaf_paths = list(og_leaves.keys())
 

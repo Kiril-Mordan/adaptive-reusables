@@ -16,8 +16,8 @@ import importlib.metadata
 import importlib.resources as pkg_resources
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, get_args, get_origin
+from pydantic import BaseModel, Field, create_model
 
 class LlmFunctionItem(BaseModel):
 
@@ -29,8 +29,6 @@ class LlmFunctionItem(BaseModel):
     description : str
     input_schema_json : dict
     output_schema_json : dict
-    input_model : Type[BaseModel]
-    output_model : Type[BaseModel]
 
 @attrs.define(kw_only=True)
 class LlmHandlerMock(ABC):
@@ -383,7 +381,7 @@ class WorkflowAdaptor:
 
 
         selected_function_input_schema, selected_function_input_schema_pyd = [
-                (af.input_schema_json, af.input_model) for af in available_functions if af.name == func_name][0]
+                (af.input_schema_json, self.json_schema_to_base_model(af.input_schema_json)) for af in available_functions if af.name == func_name][0]
 
         if workflow_current_state_schema != {}:
 
@@ -504,6 +502,55 @@ class WorkflowAdaptor:
             wf.append({"id" : len(wf), "name" : "output_model"})
 
         return wf, id_func_mapping_base
+
+    def json_schema_to_base_model(self, schema: dict) -> Dict[str, BaseModel]:
+        """Build Pydantic models from a JSON schema with $defs and $ref."""
+
+        type_mapping = {
+            "string": str,
+            "number": float,
+            "integer": int,
+            "boolean": bool,
+            "object": dict,
+            "array": list,
+        }
+
+        defs = {}
+
+        # build inline nested models
+        for def_name, def_schema in schema.get("$defs", {}).items():
+            fields = {}
+            for name, prop in def_schema["properties"].items():
+                py_type = type_mapping.get(prop.get("type", "string"), Any)
+                default = ... if name in def_schema.get("required", []) else prop.get("default", None)
+                if default is None and name not in def_schema.get("required", []):
+                    py_type = Optional[py_type]
+
+                fields[name] = (
+                    py_type,
+                    Field(default, title=prop.get("title"), description=prop.get("description"))
+                )
+            defs[def_name] = create_model(def_schema["title"], **fields)
+
+        # now build the top-level model
+        fields = {}
+        for name, prop in schema["properties"].items():
+            if "$ref" in prop.get("items", {}):  # array of nested objects
+                ref_name = prop["items"]["$ref"].split("/")[-1]
+                py_type = List[defs[ref_name]]
+                default = ... if name in schema.get("required", []) else None
+            else:
+                py_type = type_mapping.get(prop.get("type", "string"), Any)
+                default = ... if name in schema.get("required", []) else prop.get("default", None)
+                if default is None and name not in schema.get("required", []):
+                    py_type = Optional[py_type]
+
+            fields[name] = (
+                py_type,
+                Field(default, title=prop.get("title"), description=prop.get("description"))
+            )
+
+        return create_model(schema["title"], **fields)
 
     async def adapt_workflow(
         self,

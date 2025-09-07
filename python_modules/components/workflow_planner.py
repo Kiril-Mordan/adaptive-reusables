@@ -28,8 +28,6 @@ class LlmFunctionItem(BaseModel):
     description : str
     input_schema_json : dict
     output_schema_json : dict
-    input_model : Type[BaseModel]
-    output_model : Type[BaseModel]
 
 @attrs.define(kw_only=True)
 class LlmHandlerMock(ABC):
@@ -73,9 +71,7 @@ def create_function_item(
         name = func.__name__,
         description = func.__doc__.strip() if func.__doc__ else "",
         input_schema_json = input_model.model_json_schema(),
-        output_schema_json = output_model.model_json_schema(),
-        input_model = input_model,
-        output_model = output_model
+        output_schema_json = output_model.model_json_schema()
     )
 
 @attrsx.define(handler_specs = {"llm" : LlmHandlerMock})

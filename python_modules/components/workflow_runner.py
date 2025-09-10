@@ -6,14 +6,15 @@ import attrs
 import attrsx
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Type
 from pydantic import BaseModel, Field, create_model
-
+import traceback
+from enum import Enum
 
 class LlmFunctionItem(BaseModel):
 
     """
-    Function suitable for llm use. 
+    Function suitable for llm use.
     """
 
     name : str
@@ -21,6 +22,39 @@ class LlmFunctionItem(BaseModel):
     input_schema_json : dict
     output_schema_json : dict
 
+class WorkflowErrorType(Enum):
+    PLANNING = "planning"
+    ADAPTOR = "adaptor"
+    RUNNER = "runner"
+    INPUTS = "inputs"
+    OUTPUTS = "outputs"
+
+class WorkflowError(BaseModel):
+
+    error_message: Optional[str] = Field(default=None, description = "Error message if function call fails.")
+    error_type: Optional[WorkflowErrorType] = Field(default=None, description = "Error type of failed call.")
+
+
+class FunctionCallOutput(BaseModel):
+
+    output: Optional[BaseModel] = Field(default=None, description="Output of the function successful run.")
+    error: Optional[WorkflowError]  = Field(default=None, description="Error during function execution.")
+
+
+class WorkflowItem(BaseModel):
+
+    """
+    Workflow item.
+    """
+
+    name : str
+    args : dict
+
+    
+class TestedWorkflow(BaseModel):
+    workflow : List[WorkflowItem]
+    outputs : Dict[str, BaseModel]
+    error : Optional[WorkflowError]
 
 @attrsx.define()
 class WorkflowRunner:
@@ -30,11 +64,18 @@ class WorkflowRunner:
 
     def _run_func(self, 
         func : callable, 
-        inputs : type(BaseModel)):
+        inputs : Type[BaseModel]):
 
-        output = func(inputs = inputs)
+        error_message = None
+        error_type = None
+        output = None
+        try:
+            output = func(inputs = inputs)
+        except Exception as e:
+            error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            error_type = WorkflowErrorType.RUNNER
 
-        return output
+        return FunctionCallOutput(output = output, error_message = error_message, error_type = error_type)
 
     def _resolve_func_args(self, 
         outputs: Dict[str, BaseModel], 
@@ -109,13 +150,12 @@ class WorkflowRunner:
 
     def run_workflow(self, 
         workflow : List[dict], 
-        inputs : type(BaseModel) = None,
+        inputs : Type[BaseModel] = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
-        #input_model : type(BaseModel) = None,
-        output_model : type(BaseModel) = None,):
+        output_model : Type[BaseModel] = None,):
 
-        """s
+        """
         Runs llm planned workflow with provided inputs.
         """
 
@@ -139,30 +179,79 @@ class WorkflowRunner:
         if inputs : 
             outputs["0"] = inputs
 
+        error = None
+        
         for workflow_item in workflow:
 
+            try:
 
-            func_args = self._resolve_func_args(
-                outputs = outputs,
-                func_args = workflow_item["args"])
+                func_args = self._resolve_func_args(
+                    outputs = outputs,
+                    func_args = workflow_item["args"])
+
+            except Exception as e:
+                error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                error_type = WorkflowErrorType.INPUTS
+                error = WorkflowError(
+                    error_message = error_message,
+                    error_type = error_type
+                )
+                break
 
 
             if workflow_item["name"] != "output_model":
+                
+                try:
+                    func_item = [av for av in available_functions \
+                        if av.name == workflow_item["name"]][0]
+                except Exception as e:
+                    error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                    error_type = WorkflowErrorType.PLANNER
+                    error = WorkflowError(
+                        error_message = error_message,
+                        error_type = error_type
+                    )
+                    break
 
-                func_item = [av for av in available_functions \
-                    if av.name == workflow_item["name"]][0]
+                try:
+                    func_inputs = self.json_schema_to_base_model(func_item.input_schema_json)(**func_args)
+                except Exception as e:
+                    error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                    error_type = WorkflowErrorType.ADAPTOR
+                    error = WorkflowError(
+                        error_message = error_message,
+                        error_type = error_type
+                    )
+                    break
 
-                func_inputs = self.json_schema_to_base_model(func_item.input_schema_json)(**func_args)
-
-                output = self._run_func(
+                output_struct = self._run_func(
                     func = available_callables[workflow_item["name"]],
                     inputs = func_inputs
                 )
+                
+                if output_struct.error:
+                        
+                    error = output_struct.error
+                    break
+                
+                output = output_struct.output
+
 
             else:
-                output = output_model(**func_args)
+                try:
+                    output = output_model(**func_args)
+                except Exception as e:
+                    error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                    error_type = WorkflowErrorType.OUTPUTS
+                    error = WorkflowError(
+                        error_message = error_message,
+                        error_type = error_type
+                    )
+                    break
+
 
             outputs[str(workflow_item["id"])] = output
 
 
-        return outputs
+        return TestedWorkflow(workflow = workflow, outputs = outputs, error = error)
+

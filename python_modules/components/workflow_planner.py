@@ -14,7 +14,7 @@ import importlib.metadata
 import importlib.resources as pkg_resources
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Type
 from pydantic import BaseModel, Field
 
 
@@ -28,6 +28,7 @@ class LlmFunctionItem(BaseModel):
     description : str
     input_schema_json : dict
     output_schema_json : dict
+
 
 @attrs.define(kw_only=True)
 class LlmHandlerMock(ABC):
@@ -178,8 +179,8 @@ class WorkflowPlanner:
         self,
         task_description : str, 
         available_functions : List[LlmFunctionItem] = None, 
-        input_model : type(BaseModel) = None,
-        output_model : type(BaseModel) = None,
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None,
         max_retry : Optional[int] = None):
 
         """
@@ -260,7 +261,7 @@ class WorkflowPlanner:
             if function_calls is None:
                 debug_response = await self.llm_h.chat(debug_messages)
                 llm_response = debug_response['message']['content']
-                function_calls = read_json_output(output=llm_response)
+                function_calls = self._read_json_output(output=llm_response)
 
             hfunctions, afunctions = self._get_hafunctions(
                 function_calls = function_calls, 

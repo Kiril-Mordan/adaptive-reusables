@@ -91,7 +91,9 @@ class InputCollector:
                     m = re.match(r'([^\[]+)(\[(\d+)\])?', part)
                     if m:
                         key = m.group(1)
-                        if current.get(key) is None or type(current) == "list":
+                        if type(current) == "list":
+                            continue
+                        if current.get(key) is None:
                             continue
                         if m.group(2):
                             idx = int(m.group(3))
@@ -108,6 +110,8 @@ class InputCollector:
                     m = re.match(r'([^\[]+)(\[(\d+)\])?', part)
                     if m:
                         key = m.group(1)
+                        if type(current) == "list":
+                            continue
                         if current.get(key) is None:
                             continue
                         current = current[key]

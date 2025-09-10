@@ -10,13 +10,15 @@ import asyncio
 
 import yaml
 import os
+import re
+import json
 
 import importlib
 import importlib.metadata
 import importlib.resources as pkg_resources
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, get_args, get_origin
+from typing import List, Optional, Dict, Any, get_args, get_origin, Type
 from pydantic import BaseModel, Field, create_model
 
 class LlmFunctionItem(BaseModel):
@@ -140,8 +142,8 @@ class WorkflowAdaptor:
     def _make_current_state_schema(self, 
         workflow : list, 
         available_functions : List[LlmFunctionItem], 
-        input_model : type(BaseModel) = None,
-        output_model : type(BaseModel) = None,
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None,
         func_name : str = None):
 
         base_state_schema = {}
@@ -461,7 +463,7 @@ class WorkflowAdaptor:
 
     def _mod_inputs_for_output_model(self, 
         workflow : List[dict],
-        output_model : type(BaseModel),
+        output_model : Type[BaseModel],
         available_functions : List[LlmFunctionItem],
         ):
 
@@ -484,8 +486,8 @@ class WorkflowAdaptor:
 
     def _add_fcall_ids(self, 
             workflow: dict,
-            input_model : type(BaseModel) = None,
-            output_model : type(BaseModel) = None) -> dict:
+            input_model : Type[BaseModel] = None,
+            output_model : Type[BaseModel] = None) -> dict:
 
         wf_base = []
         id_func_mapping_base = {"0" : "input_model"}
@@ -556,8 +558,8 @@ class WorkflowAdaptor:
         self,
         workflow : List[dict],
         available_functions : List[LlmFunctionItem] = None,
-        input_model : type(BaseModel) = None,
-        output_model : type(BaseModel) = None,
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None,
         max_retry : Optional[int] = None):
 
         """
@@ -614,4 +616,4 @@ class WorkflowAdaptor:
 
         new_workflow = self.input_collector_h.fix_literal_values(workflow, adapted_workflow)
 
-        return adapted_workflow
+        return new_workflow

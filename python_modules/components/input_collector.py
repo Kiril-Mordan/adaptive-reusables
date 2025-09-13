@@ -62,66 +62,91 @@ class InputCollector:
             
         return leaves
 
-    def _set_by_path(self, data: any, path: str, value: any) -> any:
+    def _set_by_path(self, data: Any, path: str, value: Any) -> Any:
         """
         Return a modified copy of a nested structure (dicts/lists) given a path string.
         
-        The path format uses dots to separate keys and [index] for list indices.
-        For example: "[2].args.information[1].content"
+        Path format uses:
+        - dots for nested dict keys (e.g. "args.info")
+        - [index] for list indices (e.g. "[2].args.information[1].content")
         """
         new_data = copy.deepcopy(data)
-        parts = re.split(r'\.(?![^\[]*\])', path)
+        parts = re.split(r'\.(?![^\[]*\])', path)  # split on dots not inside [ ]
+
         current = new_data
+        parents = []   # keep track of parent containers + keys/indices
+
         for i, part in enumerate(parts):
-            # Extract any list indices at the beginning of the part.
+            # --- Handle list indices that start the part ---
             while part.startswith('['):
                 m = re.match(r'\[(\d+)\](.*)', part)
-                if m:
-                    idx = int(m.group(1))
-                    if idx >= len(current):
-                        continue
-                    current = current[idx]
-                    part = m.group(2)
-                else:
+                if not m:
                     break
-            # When at the last part, perform the update.
+                idx, rest = int(m.group(1)), m.group(2)
+                if not isinstance(current, list) or idx >= len(current):
+                    return new_data  # invalid path → return unchanged
+                parents.append((current, idx))
+                current = current[idx]
+                part = rest
+
+            # --- If this is the last part → assign the value ---
             if i == len(parts) - 1:
-                if part:
-                    # If part contains an index like key[index]
+                if part:  # dict key, maybe with list index
                     m = re.match(r'([^\[]+)(\[(\d+)\])?', part)
-                    if m:
-                        key = m.group(1)
-                        if type(current) == "list":
-                            continue
-                        if current.get(key) is None:
-                            continue
-                        if m.group(2):
+                    if not m:
+                        return new_data
+                    key = m.group(1)
+
+                    if isinstance(current, dict):
+                        if key not in current:
+                            return new_data
+                        if m.group(2):  # key[index]
                             idx = int(m.group(3))
-                            if idx >= len(current[key]):
-                                continue
+                            if not isinstance(current[key], list) or idx >= len(current[key]):
+                                return new_data
                             current[key][idx] = value
                         else:
                             current[key] = value
+                    elif isinstance(current, list):
+                        try:
+                            idx = int(key)
+                            if idx >= len(current):
+                                return new_data
+                            current[idx] = value
+                        except ValueError:
+                            return new_data
                 else:
-                    # If no part remains, update current directly.
-                    current = value
+                    # No part left → replace the entire object
+                    # e.g. path = "[0]" and we reached the end
+                    parent, idx_or_key = parents[-1]
+                    parent[idx_or_key] = value
             else:
+                # --- Traverse deeper ---
                 if part:
                     m = re.match(r'([^\[]+)(\[(\d+)\])?', part)
-                    if m:
-                        key = m.group(1)
-                        if type(current) == "list":
-                            continue
-                        if current.get(key) is None:
-                            continue
+                    if not m:
+                        return new_data
+                    key = m.group(1)
+
+                    if isinstance(current, dict):
+                        if key not in current:
+                            return new_data
                         current = current[key]
-                        if m.group(2):
+                        if m.group(2):  # key[index]
                             idx = int(m.group(3))
-                            if idx >= len(current):
-                                continue
+                            if not isinstance(current, list) or idx >= len(current):
+                                return new_data
+                            parents.append((current, idx))
                             current = current[idx]
+                    elif isinstance(current, list):
+                        try:
+                            idx = int(key)
+                            current = current[idx]
+                        except (ValueError, IndexError):
+                            return new_data
                 else:
                     continue
+
         return new_data
 
     def _update_workflow_from_leaves(self, workflow: Any, leaf_paths: list, new_values: list) -> Any:

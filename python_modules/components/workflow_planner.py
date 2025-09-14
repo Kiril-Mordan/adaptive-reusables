@@ -18,17 +18,16 @@ from typing import List, Optional, Dict, Any, Type
 from pydantic import BaseModel, Field
 
 
-class LlmFunctionItem(BaseModel):
+class WorkflowPlannerResponse(BaseModel):
 
-    """
-    Function suitable for llm use. 
-    """
+    retries : int = Field(description = "Number of attempt it took to generate workflow.")
+    workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
+    init_messages : List[dict] = Field(default = None, description = "Initial messages for planning workflow.")
+    errors : List[WorkflowError] = Field(description = "Errors during planning.")
 
-    name : str
-    description : str
-    input_schema_json : dict
-    output_schema_json : dict
-
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
 @attrs.define(kw_only=True)
 class LlmHandlerMock(ABC):
@@ -81,7 +80,7 @@ class WorkflowPlanner:
 
     system_message : str = attrs.field(default=None)
     system_message_items : Dict[str, str] = attrs.field(default=None)
-    debug_prompt : str = attrs.field(default=None)
+    debug_prompts : Dict[str, str] = attrs.field(default=None)
     plan_prompt : str = attrs.field(default=None)
     plan_prompt_items : Dict[str, str] = attrs.field(default=None)
     
@@ -103,7 +102,7 @@ class WorkflowPlanner:
         system_message : str = None, 
         system_message_items : Dict[str,str] = None,
         plan_prompt_items : Dict[str, str] = None,
-        debug_prompt : str = None,
+        debug_prompts : Dict[str, str] = None,
         plan_prompt : str = None
         ):
 
@@ -138,10 +137,10 @@ class WorkflowPlanner:
         else:
             self.plan_prompt_items = wp_prompts.get("plan_prompt_items", {})
 
-        if debug_prompt: 
-            self.debug_prompt = debug_prompt
+        if debug_prompts: 
+            self.debug_prompts = debug_prompts
         else:
-            self.debug_prompt = wp_prompts['debug_prompt']
+            self.debug_prompts = wp_prompts['debug_prompts']
 
         if plan_prompt: 
             self.plan_prompt = plan_prompt
@@ -175,32 +174,12 @@ class WorkflowPlanner:
 
         return hfunctions, afunctions 
 
-    async def generate_workflow(
-        self,
+    def _prep_init_messages(self,
         task_description : str, 
-        available_functions : List[LlmFunctionItem] = None, 
+        available_functions : List[LlmFunctionItem], 
         input_model : Type[BaseModel] = None,
-        output_model : Type[BaseModel] = None,
-        max_retry : Optional[int] = None):
+        output_model : Type[BaseModel] = None,):
 
-        """
-        Generates initial workflow from available functions given task description.
-
-        Args:
-
-            task_description (str): llm prompt that describes a task, achievable with available functions.
-            available_functions (List[LlmFunctionItem]): list of function items for llm to pick from with their input and output models.
-            max_retry (Optional[int]): optional maximum number of allowed retries.
-        """
-
-        if max_retry is None:
-            max_retry = self.max_retry
-
-        if available_functions is None:
-            available_functions = self.available_functions
-
-        if available_functions is None:
-            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
 
         available_functions_json = json.dumps([
             {key:value for key,value in av.model_dump().items() \
@@ -244,46 +223,160 @@ class WorkflowPlanner:
         )}
         ]
 
-        response = await self.llm_h.chat(messages)
-        llm_response = response['message']['content']
+        return messages
 
+    def _check_llm_response(self, 
+        llm_response : str, 
+        available_functions : List[LlmFunctionItem],
+        init_error : Optional[WorkflowError] = None):
 
-        failed_to_extract = True
-        retry_i = 0
-        debug_messages = messages
-        while failed_to_extract and (retry_i < max_retry):
+        if init_error:
+            return init_error
 
-            retry_i += 1
-            self.logger.debug(f"Attempt: {retry_i}")
+        function_calls = self._read_json_output(output=llm_response)
 
-            function_calls = self._read_json_output(output=llm_response)
+        if function_calls is None:
+            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON)
 
-            if function_calls is None:
-                debug_response = await self.llm_h.chat(debug_messages)
-                llm_response = debug_response['message']['content']
-                function_calls = self._read_json_output(output=llm_response)
-
-            hfunctions, afunctions = self._get_hafunctions(
+        hfunctions, afunctions = self._get_hafunctions(
                 function_calls = function_calls, 
                 available_functions = available_functions)
 
-            if hfunctions is None:
+        if hfunctions is None:
+            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON)
+
+        if not ((function_calls is not None) and ((hfunctions is None) or (hfunctions == []))):
+            return WorkflowError(error_type = WorkflowErrorType.PLANNING_HF)
+
+        return None
+
+
+    async def generate_workflow(
+        self,
+        task_description : str = None, 
+        available_functions : List[LlmFunctionItem] = None, 
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None,
+        max_retry : Optional[int] = None,
+        planned_workflow : Optional[WorkflowPlannerResponse] = None) -> WorkflowPlannerResponse:
+
+        """
+        Generates initial workflow from available functions given task description.
+
+        Args:
+
+            task_description (str): llm prompt that describes a task, achievable with available functions.
+            available_functions (List[LlmFunctionItem]): list of function items for llm to pick from with their input and output models.
+            max_retry (Optional[int]): optional maximum number of allowed retries.
+        """
+
+        if max_retry is None:
+            max_retry = self.max_retry
+
+        if available_functions is None:
+            available_functions = self.available_functions
+
+        if available_functions is None:
+            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
+
+        if planned_workflow is None:
+        
+            init_messages = self._prep_init_messages(
+                available_functions = available_functions, 
+                task_description = task_description, 
+                input_model = input_model, 
+                output_model = output_model
+            )
+
+            response = await self.llm_h.chat(init_messages)
+            llm_response = response['message']['content']
+
+            retry_i = 0
+            errors = []
+            init_error = None
+        
+        else:
+            init_messages = planned_workflow.init_messages
+            llm_response = json.dumps(planned_workflow.workflow)
+            retry_i = planned_workflow.retries
+            errors = planned_workflow.errors
+            init_error = errors[-1]
+        
+        retry_messages = init_messages
+
+        while retry_i < max_retry:
+
+            error = self._check_llm_response(
+                init_error = init_error,
+                llm_response = llm_response,
+                available_functions = available_functions)
+
+            if error is None:
+                planned_workflow = self._read_json_output(output=llm_response)
+                return WorkflowPlannerResponse(
+                    errors = errors,
+                    workflow = planned_workflow,
+                    retries = retry_i,
+                    init_messages = init_messages
+                )
+
+            retry_i += 1
+            if init_error:
+                init_error = None
+            else:
+                errors.append(error)
+
+            self.logger.debug(f"Attempt: {retry_i}")
+
+            if error.error_type is WorkflowErrorType.PLANNING_JSON:
+                debug_response = await self.llm_h.chat(retry_messages)
+                llm_response = debug_response['message']['content']
                 continue
 
-            if (function_calls is not None) and ((hfunctions is None) or (hfunctions == [])):
-                return function_calls
+            if error.error_type is WorkflowErrorType.PLANNING_HF:
 
+                function_calls = self._read_json_output(output=llm_response)
 
-            debug_messages = messages + [
-                {'role' : 'assistant', "content" : llm_response},
-                {"role": "user", "content": self.debug_prompt.format(
-                    hfunctions = "\n -".join([h for h in hfunctions]),
-                    afunctions = "\n -".join([a for a in afunctions]))}
-            ]
+                hfunctions, afunctions = self._get_hafunctions(
+                        function_calls = function_calls, 
+                        available_functions = available_functions)
 
-            debug_response = await self.llm_h.chat(debug_messages)
-            llm_response = debug_response['message']['content']
+                retry_messages = init_messages + [
+                    {'role' : 'assistant', "content" : llm_response},
+                    {"role": "user", "content": self.debug_prompts["hf"].format(
+                        hfunctions = "\n -".join([h for h in hfunctions]),
+                        afunctions = "\n -".join([a for a in afunctions]))}
+                ]
 
+                debug_response = await self.llm_h.chat(retry_messages)
+                llm_response = debug_response['message']['content']
+                continue
+
+            if error.error_type is WorkflowErrorType.RUNNER:
+
+                function_calls = self._read_json_output(output=llm_response)
+
+                _, afunctions = self._get_hafunctions(
+                        function_calls = function_calls, 
+                        available_functions = available_functions)
+
+                ffunction = error.additional_info.get("ffunction")
+
+                retry_messages = init_messages + [
+                    {'role' : 'assistant', "content" : llm_response},
+                    {"role": "user", "content": self.debug_prompts["alt"].format(
+                        ffunction = ffunction,
+                        afunctions = "\n -".join([a for a in afunctions if a != ffunction]))}
+                ]
+
+                debug_response = await self.llm_h.chat(retry_messages)
+                llm_response = debug_response['message']['content']
+                continue
 
         if retry_i == max_retry:
-            return None
+            return WorkflowPlannerResponse(
+                errors = errors,
+                workflow = None,
+                retries = retry_i,
+                init_messages = init_messages
+            )

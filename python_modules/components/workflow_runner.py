@@ -11,35 +11,15 @@ from pydantic import BaseModel, Field, create_model
 import traceback
 from enum import Enum
 
-class LlmFunctionItem(BaseModel):
-
-    """
-    Function suitable for llm use.
-    """
-
-    name : str
-    description : str
-    input_schema_json : dict
-    output_schema_json : dict
-
-class WorkflowErrorType(Enum):
-    PLANNING = "planning"
-    ADAPTOR = "adaptor"
-    RUNNER = "runner"
-    INPUTS = "inputs"
-    OUTPUTS = "outputs"
-
-class WorkflowError(BaseModel):
-
-    error_message: Optional[str] = Field(default=None, description = "Error message if function call fails.")
-    error_type: Optional[WorkflowErrorType] = Field(default=None, description = "Error type of failed call.")
-
 
 class FunctionCallOutput(BaseModel):
 
     output: Optional[BaseModel] = Field(default=None, description="Output of the function successful run.")
     error: Optional[WorkflowError]  = Field(default=None, description="Error during function execution.")
 
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
 class WorkflowItem(BaseModel):
 
@@ -56,6 +36,10 @@ class TestedWorkflow(BaseModel):
     outputs : Dict[str, BaseModel]
     error : Optional[WorkflowError]
 
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+
 @attrsx.define()
 class WorkflowRunner:
 
@@ -63,19 +47,23 @@ class WorkflowRunner:
     available_functions : List[LlmFunctionItem] = attrs.field(default=None)
 
     def _run_func(self, 
+        func_name : str,
         func : callable, 
         inputs : Type[BaseModel]):
 
-        error_message = None
-        error_type = None
+        error = None
         output = None
         try:
             output = func(inputs = inputs)
         except Exception as e:
             error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             error_type = WorkflowErrorType.RUNNER
+            error = WorkflowError(
+                error_message = error_message, 
+                error_type = error_type,
+                additional_info = {"ffunction" : func_name})
 
-        return FunctionCallOutput(output = output, error_message = error_message, error_type = error_type)
+        return FunctionCallOutput(output = output, error = error)
 
     def _resolve_func_args(self, 
         outputs: Dict[str, BaseModel], 
@@ -206,7 +194,7 @@ class WorkflowRunner:
                         if av.name == workflow_item["name"]][0]
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = WorkflowErrorType.PLANNER
+                    error_type = WorkflowErrorType.PLANNING_HF
                     error = WorkflowError(
                         error_message = error_message,
                         error_type = error_type
@@ -225,6 +213,7 @@ class WorkflowRunner:
                     break
 
                 output_struct = self._run_func(
+                    func_name = workflow_item["name"],
                     func = available_callables[workflow_item["name"]],
                     inputs = func_inputs
                 )

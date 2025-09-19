@@ -575,6 +575,8 @@ class WorkflowAdaptor:
         if available_functions is None:
             raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
 
+        workflow = workflow.copy()
+
         id_workflow, id_func_mapping = self._add_fcall_ids(
             workflow=workflow,
             input_model=input_model,

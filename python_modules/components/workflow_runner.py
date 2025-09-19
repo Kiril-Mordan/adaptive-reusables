@@ -162,6 +162,8 @@ class WorkflowRunner:
         if output_model:
             available_callables["output_model"] = output_model
 
+        workflow = workflow.copy()
+
         outputs = {}
 
         if inputs : 

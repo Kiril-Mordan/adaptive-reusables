@@ -64,8 +64,9 @@ plan_prompt_items:
 
   output_schema : > 
     ---
-    The following is the expected output model for the workflow, outputs from functions selected in the workflow should 
-    be able to populate its fields, given the task with format "source: <previous_workflow_step>.output.<field_name>" or "source: input_model.output.<field_name>". 
+    The following is the expected output model for the workflow, which should be included as additional workflow step named 'output_model'. 
+    Outputs from functions selected in the workflow should be able to populate its fields, 
+    given the task with format "source: <previous_workflow_step>.output.<field_name>" or "source: input_model.output.<field_name>". 
 
     {output_model_schema}
 
@@ -103,3 +104,5 @@ debug_prompts:
 
 
     Do not comment!
+  mo: >
+    Your output is missing output_model, pls include it as a final step!

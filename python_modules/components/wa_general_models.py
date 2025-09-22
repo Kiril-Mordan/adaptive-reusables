@@ -20,8 +20,9 @@ class LlmFunctionItem(BaseModel):
 
 class WorkflowErrorType(Enum):
     PLANNING_JSON = "planning_json"
+    PLANNING_MISSOUTPUT = "planning_missoutput"
     PLANNING_HF = "planning_hf"
-    ADAPTOR = "adaptor"
+    ADAPTOR_JSON = "adaptor_json"
     RUNNER = "runner"
     INPUTS = "inputs"
     OUTPUTS = "outputs"

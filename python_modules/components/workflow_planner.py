@@ -24,6 +24,7 @@ class WorkflowPlannerResponse(BaseModel):
     workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for planning workflow.")
     errors : List[WorkflowError] = Field(description = "Errors during planning.")
+    include_output : bool = Field(description = "If output model is expected.")
 
     model_config = {
         "arbitrary_types_allowed": True
@@ -162,7 +163,10 @@ class WorkflowPlanner:
 
         return function_calls
 
-    def _get_hafunctions(self, function_calls : list, available_functions : List[LlmFunctionItem]) -> tuple:
+    def _get_hafunctions(self, 
+        function_calls : list, 
+        available_functions : List[LlmFunctionItem],
+        include_output : bool) -> tuple:
 
         hfunctions, afunctions = None, None
 
@@ -171,6 +175,9 @@ class WorkflowPlanner:
             afunctions = [afd.name for afd in available_functions]
 
             hfunctions = [fc['name'] for fc in function_calls if fc['name'] not in afunctions]
+
+            if include_output:
+                hfunctions = [hf for hf in hfunctions if hf != "output_model"]
 
         return hfunctions, afunctions 
 
@@ -228,6 +235,7 @@ class WorkflowPlanner:
     def _check_llm_response(self, 
         llm_response : str, 
         available_functions : List[LlmFunctionItem],
+        include_output : bool = False,
         init_error : Optional[WorkflowError] = None):
 
         if init_error:
@@ -236,17 +244,26 @@ class WorkflowPlanner:
         function_calls = self._read_json_output(output=llm_response)
 
         if function_calls is None:
-            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON)
+            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON,
+                additional_info = {"llm_response" : llm_response})
 
         hfunctions, afunctions = self._get_hafunctions(
                 function_calls = function_calls, 
-                available_functions = available_functions)
+                available_functions = available_functions,
+                include_output = include_output)
 
         if hfunctions is None:
-            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON)
+            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON,
+                additional_info = {"llm_response" : llm_response})
 
         if not ((function_calls is not None) and ((hfunctions is None) or (hfunctions == []))):
-            return WorkflowError(error_type = WorkflowErrorType.PLANNING_HF)
+            return WorkflowError(error_type = WorkflowErrorType.PLANNING_HF,
+                additional_info = {"llm_response" : llm_response})
+
+        if include_output:
+            if "output_model" not in [fc["name"] for fc in function_calls]:
+                return WorkflowError(error_type = WorkflowErrorType.PLANNING_MISSOUTPUT,
+                additional_info = {"llm_response" : llm_response})
 
         return None
 
@@ -294,6 +311,7 @@ class WorkflowPlanner:
             retry_i = 0
             errors = []
             init_error = None
+            include_output = output_model is not None
         
         else:
             init_messages = planned_workflow.init_messages
@@ -301,6 +319,7 @@ class WorkflowPlanner:
             retry_i = planned_workflow.retries
             errors = planned_workflow.errors
             init_error = errors[-1]
+            include_output = planned_workflow.include_output
         
         retry_messages = init_messages
 
@@ -309,6 +328,7 @@ class WorkflowPlanner:
             error = self._check_llm_response(
                 init_error = init_error,
                 llm_response = llm_response,
+                include_output = include_output,
                 available_functions = available_functions)
 
             if error is None:
@@ -317,6 +337,7 @@ class WorkflowPlanner:
                     errors = errors,
                     workflow = planned_workflow,
                     retries = retry_i,
+                    include_output = include_output,
                     init_messages = init_messages
                 )
 
@@ -333,13 +354,25 @@ class WorkflowPlanner:
                 llm_response = debug_response['message']['content']
                 continue
 
+            if error.error_type is WorkflowErrorType.PLANNING_MISSOUTPUT:
+
+                retry_messages = init_messages + [
+                    {'role' : 'assistant', "content" : llm_response},
+                    {"role": "user", "content": self.debug_prompts["mo"]}
+                ]
+
+                debug_response = await self.llm_h.chat(retry_messages)
+                llm_response = debug_response['message']['content']
+                continue
+
             if error.error_type is WorkflowErrorType.PLANNING_HF:
 
                 function_calls = self._read_json_output(output=llm_response)
 
                 hfunctions, afunctions = self._get_hafunctions(
                         function_calls = function_calls, 
-                        available_functions = available_functions)
+                        available_functions = available_functions,
+                        include_output = include_output)
 
                 retry_messages = init_messages + [
                     {'role' : 'assistant', "content" : llm_response},
@@ -358,7 +391,8 @@ class WorkflowPlanner:
 
                 _, afunctions = self._get_hafunctions(
                         function_calls = function_calls, 
-                        available_functions = available_functions)
+                        available_functions = available_functions,
+                        include_output = include_output)
 
                 ffunction = error.additional_info.get("ffunction")
 
@@ -378,5 +412,6 @@ class WorkflowPlanner:
                 errors = errors,
                 workflow = None,
                 retries = retry_i,
-                init_messages = init_messages
+                init_messages = init_messages,
+                include_output = include_output,
             )

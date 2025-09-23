@@ -207,10 +207,11 @@ class WorkflowRunner:
                     func_inputs = self.json_schema_to_base_model(func_item.input_schema_json)(**func_args)
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = WorkflowErrorType.ADAPTOR
+                    error_type = WorkflowErrorType.ADAPTOR_JSON
                     error = WorkflowError(
                         error_message = error_message,
-                        error_type = error_type
+                        error_type = error_type,
+                        additional_info = {"step_id" : workflow_item["id"]}
                     )
                     break
 

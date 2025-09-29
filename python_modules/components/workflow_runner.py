@@ -209,9 +209,11 @@ class WorkflowRunner:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                     error_type = WorkflowErrorType.ADAPTOR_JSON
                     error = WorkflowError(
-                        error_message = error_message,
+                        error_message = None,
                         error_type = error_type,
-                        additional_info = {"step_id" : workflow_item["id"]}
+                        additional_info = {
+                            "step_id" : workflow_item["id"],
+                            "error_messages" : [error_message]}
                     )
                     break
 

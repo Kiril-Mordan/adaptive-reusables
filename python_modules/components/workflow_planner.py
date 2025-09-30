@@ -24,6 +24,7 @@ class WorkflowPlannerResponse(BaseModel):
     workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for planning workflow.")
     errors : List[WorkflowError] = Field(description = "Errors during planning.")
+    include_input : bool = Field(description = "If input model is expected.")
     include_output : bool = Field(description = "If output model is expected.")
 
     model_config = {
@@ -311,6 +312,7 @@ class WorkflowPlanner:
             retry_i = 0
             errors = []
             init_error = None
+            include_input = input_model is not None
             include_output = output_model is not None
         
         else:
@@ -319,6 +321,7 @@ class WorkflowPlanner:
             retry_i = planned_workflow.retries
             errors = planned_workflow.errors
             init_error = errors[-1]
+            include_input = planned_workflow.include_input
             include_output = planned_workflow.include_output
         
         retry_messages = init_messages
@@ -337,6 +340,7 @@ class WorkflowPlanner:
                     errors = errors,
                     workflow = planned_workflow,
                     retries = retry_i,
+                    include_input = include_input,
                     include_output = include_output,
                     init_messages = init_messages
                 )
@@ -413,5 +417,6 @@ class WorkflowPlanner:
                 workflow = None,
                 retries = retry_i,
                 init_messages = init_messages,
+                include_input = include_input,
                 include_output = include_output,
             )

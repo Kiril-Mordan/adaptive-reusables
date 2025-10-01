@@ -54,6 +54,7 @@ class WorkflowAdaptorStep(BaseModel):
     init_messages : List[dict] = Field(default = None, description = "Initial messages for adapting workflow.")
     errors : List[WorkflowError] = Field(description = "Errors during planning.")
     adapted_schema : Optional[dict] = Field(default = None, description = "Planned workflow.")
+    state_schema: Optional[dict] = Field(default = None, description = "Schema of steps before this one in the workflow.")
     target_schema : Optional[dict] = Field(default = None,description = "Target schema from available functions.")
 
     model_config = {
@@ -63,7 +64,8 @@ class WorkflowAdaptorStep(BaseModel):
 class WorkflowAdaptorResponse(BaseModel):
 
     total_retries : int = Field(description = "Number of attempt it took to adapt workflow.")
-    workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
+    planned_workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
+    workflow : Optional[List[dict]] = Field(default = None, description = "Adapted workflow.")
     all_errors : List[WorkflowError] = Field(description = "Errors during planning.")
     steps : List[WorkflowAdaptorStep] = Field(description = "Steps it took to adapt workflow.")
     include_input : bool = Field(description = "If input model is expected.")
@@ -513,6 +515,7 @@ class WorkflowAdaptor:
                         func_name = func_name,
                         errors = errors,
                         adapted_schema = adapted_schema,
+                        state_schema = workflow_current_state_schema,
                         target_schema = target_schema,
                         retries = retry_i,
                         init_messages = init_messages
@@ -545,6 +548,7 @@ class WorkflowAdaptor:
                 func_name = func_name,
                 errors = [],
                 adapted_schema = workflow[0]['args'],
+                state_schema = workflow_current_state_schema,
                 retries = 0,
                 target_schema = {},
                 init_messages = []
@@ -557,6 +561,7 @@ class WorkflowAdaptor:
                 func_name = func_name,
                 errors = errors,
                 adapted_schema = None,
+                state_schema = None,
                 retries = retry_i,
                 target_schema = target_schema,
                 init_messages = init_messages
@@ -730,6 +735,7 @@ class WorkflowAdaptor:
 
             return WorkflowAdaptorResponse(
                 total_retries = sum([adapted_step.retries for adapted_step in adapted_steps]),
+                planned_workflow = id_workflow,
                 workflow = adapted_fixed_workflow,
                 all_errors = [err for adapted_step in adapted_steps for err in adapted_step.errors],
                 steps = adapted_steps,
@@ -753,17 +759,18 @@ class WorkflowAdaptor:
             reset_step = await self._adapt_func(
                 step_id = retried_step_id,
                 func_name = retried_step['name'],
-                workflow = adapted_workflow.workflow,
-                workflow_current_state_schema = retried_step_obj.target_schema,
+                workflow = adapted_workflow.planned_workflow,
+                workflow_current_state_schema = retried_step_obj.state_schema,
                 available_functions = available_functions,
                 id_func_mapping = id_func_mapping,
                 max_retry = max_retry)
 
             adapted_workflow.total_retries += reset_step.retries
+            adapted_workflow.all_errors += reset_step.errors
 
             reset_step.errors = retried_step_obj.errors + reset_step.errors
             reset_step.retries += retried_step_obj.retries
-
+            
             adapted_workflow.steps = [reset_step \
                 if step.step_id == retried_step_id else step \
                 for step in adapted_workflow.steps]

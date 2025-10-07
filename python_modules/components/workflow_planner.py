@@ -23,7 +23,7 @@ class WorkflowPlannerResponse(BaseModel):
     retries : int = Field(description = "Number of attempt it took to generate workflow.")
     workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for planning workflow.")
-    errors : List[WorkflowError] = Field(description = "Errors during planning.")
+    errors : List[BaseModel] = Field(description = "Errors during planning.")
     include_input : bool = Field(description = "If input model is expected.")
     include_output : bool = Field(description = "If output model is expected.")
 
@@ -44,41 +44,11 @@ class LlmHandlerMock(ABC):
         pass
 
 
-def create_function_item(
-    func: callable, 
-    input_model: Type[BaseModel], 
-    output_model: Type[BaseModel]) -> dict:
-    """
-    Constructs a structured function item that includes:
-      - function name (extracted from the actual function's __name__)
-      - function description (extracted from the function's __doc__)
-      - JSON schema for the input model
-      - JSON schema for the output model
-
-    Parameters:
-      func: The actual function (callable) object.
-      input_model: The Pydantic model class representing the function's input schema.
-      output_model: The Pydantic model class representing the function's output schema.
-
-    Returns:
-      LlmFunctionItem with:
-        - "name": the function's name.
-        - "description": the function's description (docstring).
-        - "input_schema_json": the JSON schema (as a dict) for the input model.
-        - "output_schema_json": the JSON schema (as a dict) for the output model.
-        - "input_model": The Pydantic model class representing the function's input schema.
-        - "output_model": The Pydantic model class representing the function's output schema.
-    """
-    return LlmFunctionItem(
-        name = func.__name__,
-        description = func.__doc__.strip() if func.__doc__ else "",
-        input_schema_json = input_model.model_json_schema(),
-        output_schema_json = output_model.model_json_schema()
-    )
-
 @attrsx.define(handler_specs = {"llm" : LlmHandlerMock})
 class WorkflowPlanner:
 
+    workflow_error_types = attrs.field()
+    workflow_error = attrs.field()
 
     system_message : str = attrs.field(default=None)
     system_message_items : Dict[str, str] = attrs.field(default=None)
@@ -87,7 +57,7 @@ class WorkflowPlanner:
     plan_prompt_items : Dict[str, str] = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
-    available_functions : List[LlmFunctionItem] = attrs.field(default=None)
+    available_functions : list = attrs.field(default=None)
 
     max_retry : int = attrs.field(default=5)
 
@@ -111,13 +81,13 @@ class WorkflowPlanner:
         if prompts_filepath is None: 
             prompts_filepath = self.prompts_filepath
 
-        wa_path = pkg_resources.files('workflow_agent')
+        wa_path = pkg_resources.files('workflow_auto_assembler')
 
         if 'artifacts' in os.listdir(wa_path):
 
             if prompts_filepath is None:
 
-                with pkg_resources.path('workflow_agent.artifacts.prompts',
+                with pkg_resources.path('workflow_auto_assembler.artifacts.prompts',
                 'workflow_planner.yml') as path:
                     prompts_filepath = path
 
@@ -166,7 +136,7 @@ class WorkflowPlanner:
 
     def _get_hafunctions(self, 
         function_calls : list, 
-        available_functions : List[LlmFunctionItem],
+        available_functions : list,
         include_output : bool) -> tuple:
 
         hfunctions, afunctions = None, None
@@ -184,7 +154,7 @@ class WorkflowPlanner:
 
     def _prep_init_messages(self,
         task_description : str, 
-        available_functions : List[LlmFunctionItem], 
+        available_functions : list, 
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,):
 
@@ -235,9 +205,9 @@ class WorkflowPlanner:
 
     def _check_llm_response(self, 
         llm_response : str, 
-        available_functions : List[LlmFunctionItem],
+        available_functions : list,
         include_output : bool = False,
-        init_error : Optional[WorkflowError] = None):
+        init_error : Optional[Type[BaseModel]] = None):
 
         if init_error:
             return init_error
@@ -245,7 +215,7 @@ class WorkflowPlanner:
         function_calls = self._read_json_output(output=llm_response)
 
         if function_calls is None:
-            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON,
+            return self.workflow_error(error_type = self.workflow_error_types.PLANNING_JSON,
                 additional_info = {"llm_response" : llm_response})
 
         hfunctions, afunctions = self._get_hafunctions(
@@ -254,16 +224,16 @@ class WorkflowPlanner:
                 include_output = include_output)
 
         if hfunctions is None:
-            return WorkflowError(error_type = WorkflowErrorType.PLANNING_JSON,
+            return self.workflow_error(error_type = self.workflow_error_types.PLANNING_JSON,
                 additional_info = {"llm_response" : llm_response})
 
         if not ((function_calls is not None) and ((hfunctions is None) or (hfunctions == []))):
-            return WorkflowError(error_type = WorkflowErrorType.PLANNING_HF,
+            return self.workflow_error(error_type = self.workflow_error_types.PLANNING_HF,
                 additional_info = {"llm_response" : llm_response})
 
         if include_output:
             if "output_model" not in [fc["name"] for fc in function_calls]:
-                return WorkflowError(error_type = WorkflowErrorType.PLANNING_MISSOUTPUT,
+                return self.workflow_error(error_type = self.workflow_error_types.PLANNING_MISSOUTPUT,
                 additional_info = {"llm_response" : llm_response})
 
         return None
@@ -272,7 +242,7 @@ class WorkflowPlanner:
     async def generate_workflow(
         self,
         task_description : str = None, 
-        available_functions : List[LlmFunctionItem] = None, 
+        available_functions : list = None, 
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,
         max_retry : Optional[int] = None,
@@ -284,7 +254,7 @@ class WorkflowPlanner:
         Args:
 
             task_description (str): llm prompt that describes a task, achievable with available functions.
-            available_functions (List[LlmFunctionItem]): list of function items for llm to pick from with their input and output models.
+            available_functions (list): list of function items for llm to pick from with their input and output models.
             max_retry (Optional[int]): optional maximum number of allowed retries.
         """
 
@@ -295,7 +265,7 @@ class WorkflowPlanner:
             available_functions = self.available_functions
 
         if available_functions is None:
-            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
+            raise ValueError("Input available_functions : list cannot be None!")
 
         if planned_workflow is None:
         
@@ -353,12 +323,12 @@ class WorkflowPlanner:
 
             self.logger.debug(f"Attempt: {retry_i}")
 
-            if error.error_type is WorkflowErrorType.PLANNING_JSON:
+            if error.error_type is self.workflow_error_types.PLANNING_JSON:
                 debug_response = await self.llm_h.chat(retry_messages)
                 llm_response = debug_response['message']['content']
                 continue
 
-            if error.error_type is WorkflowErrorType.PLANNING_MISSOUTPUT:
+            if error.error_type is self.workflow_error_types.PLANNING_MISSOUTPUT:
 
                 retry_messages = init_messages + [
                     {'role' : 'assistant', "content" : llm_response},
@@ -369,7 +339,7 @@ class WorkflowPlanner:
                 llm_response = debug_response['message']['content']
                 continue
 
-            if error.error_type is WorkflowErrorType.PLANNING_HF:
+            if error.error_type is self.workflow_error_types.PLANNING_HF:
 
                 function_calls = self._read_json_output(output=llm_response)
 
@@ -389,7 +359,7 @@ class WorkflowPlanner:
                 llm_response = debug_response['message']['content']
                 continue
 
-            if error.error_type is WorkflowErrorType.RUNNER:
+            if error.error_type is self.workflow_error_types.RUNNER:
 
                 function_calls = self._read_json_output(output=llm_response)
 

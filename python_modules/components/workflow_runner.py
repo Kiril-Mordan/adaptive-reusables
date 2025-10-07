@@ -15,7 +15,7 @@ from enum import Enum
 class FunctionCallOutput(BaseModel):
 
     output: Optional[BaseModel] = Field(default=None, description="Output of the function successful run.")
-    error: Optional[WorkflowError]  = Field(default=None, description="Error during function execution.")
+    error: Optional[BaseModel]  = Field(default=None, description="Error during function execution.")
 
     model_config = {
         "arbitrary_types_allowed": True
@@ -34,7 +34,7 @@ class WorkflowItem(BaseModel):
 class TestedWorkflow(BaseModel):
     workflow : List[WorkflowItem]
     outputs : Dict[str, BaseModel]
-    error : Optional[WorkflowError]
+    error : Optional[BaseModel]
 
     model_config = {
         "arbitrary_types_allowed": True
@@ -42,6 +42,9 @@ class TestedWorkflow(BaseModel):
 
 @attrsx.define()
 class WorkflowRunner:
+
+    workflow_error_types = attrs.field()
+    workflow_error = attrs.field()
 
     available_callables : Dict[str, callable] = attrs.field(default=None)
     available_functions : List[LlmFunctionItem] = attrs.field(default=None)
@@ -57,8 +60,8 @@ class WorkflowRunner:
             output = func(inputs = inputs)
         except Exception as e:
             error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            error_type = WorkflowErrorType.RUNNER
-            error = WorkflowError(
+            error_type = self.workflow_error_types.RUNNER
+            error = self.workflow_error(
                 error_message = error_message, 
                 error_type = error_type,
                 additional_info = {"ffunction" : func_name})
@@ -181,8 +184,8 @@ class WorkflowRunner:
 
             except Exception as e:
                 error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                error_type = WorkflowErrorType.INPUTS
-                error = WorkflowError(
+                error_type = self.workflow_error_types.INPUTS
+                error = self.workflow_error(
                     error_message = error_message,
                     error_type = error_type
                 )
@@ -196,8 +199,8 @@ class WorkflowRunner:
                         if av.name == workflow_item["name"]][0]
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = WorkflowErrorType.PLANNING_HF
-                    error = WorkflowError(
+                    error_type = self.workflow_error_types.PLANNING_HF
+                    error = self.workflow_error(
                         error_message = error_message,
                         error_type = error_type
                     )
@@ -207,8 +210,8 @@ class WorkflowRunner:
                     func_inputs = self.json_schema_to_base_model(func_item.input_schema_json)(**func_args)
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = WorkflowErrorType.ADAPTOR_JSON
-                    error = WorkflowError(
+                    error_type = self.workflow_error_types.ADAPTOR_JSON
+                    error = self.workflow_error(
                         error_message = None,
                         error_type = error_type,
                         additional_info = {
@@ -236,8 +239,8 @@ class WorkflowRunner:
                     output = output_model(**func_args)
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = WorkflowErrorType.OUTPUTS
-                    error = WorkflowError(
+                    error_type = self.workflow_error_types.OUTPUTS
+                    error = self.workflow_error(
                         error_message = error_message,
                         error_type = error_type
                     )

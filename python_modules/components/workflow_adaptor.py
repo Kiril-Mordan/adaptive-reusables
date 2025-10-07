@@ -52,7 +52,7 @@ class WorkflowAdaptorStep(BaseModel):
     func_name : str = Field(description = "Function name used in the step.")
     retries : int = Field(description = "Number of attempt it took to generate workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for adapting workflow.")
-    errors : List[WorkflowError] = Field(description = "Errors during planning.")
+    errors : List[BaseModel] = Field(description = "Errors during planning.")
     adapted_schema : Optional[dict] = Field(default = None, description = "Planned workflow.")
     state_schema: Optional[dict] = Field(default = None, description = "Schema of steps before this one in the workflow.")
     target_schema : Optional[dict] = Field(default = None,description = "Target schema from available functions.")
@@ -66,7 +66,7 @@ class WorkflowAdaptorResponse(BaseModel):
     total_retries : int = Field(description = "Number of attempt it took to adapt workflow.")
     planned_workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
     workflow : Optional[List[dict]] = Field(default = None, description = "Adapted workflow.")
-    all_errors : List[WorkflowError] = Field(description = "Errors during planning.")
+    all_errors : List[BaseModel] = Field(description = "Errors during planning.")
     steps : List[WorkflowAdaptorStep] = Field(description = "Steps it took to adapt workflow.")
     include_input : bool = Field(description = "If input model is expected.")
     include_output : bool = Field(description = "If output model is expected.")
@@ -78,6 +78,8 @@ class WorkflowAdaptorResponse(BaseModel):
 @attrsx.define(handler_specs = {"llm" : LlmHandlerMock, "input_collector" : InputCollectorMock})
 class WorkflowAdaptor:
 
+    workflow_error_types = attrs.field()
+    workflow_error = attrs.field()
 
     system_message : str = attrs.field(default=None)
     system_message_items : Dict[str, str] = attrs.field(default=None)
@@ -109,13 +111,13 @@ class WorkflowAdaptor:
         if prompts_filepath is None: 
             prompts_filepath = self.prompts_filepath
 
-        wa_path = pkg_resources.files('workflow_agent')
+        wa_path = pkg_resources.files('workflow_auto_assembler')
 
         if 'artifacts' in os.listdir(wa_path):
 
             if prompts_filepath is None:
 
-                with pkg_resources.path('workflow_agent.artifacts.prompts',
+                with pkg_resources.path('workflow_auto_assembler.artifacts.prompts',
                 'workflow_adaptor.yml') as path:
                     prompts_filepath = path
 
@@ -417,7 +419,7 @@ class WorkflowAdaptor:
         state : dict, 
         id_func_mapping : Dict[str,str],
         current_function : str,
-        init_error : Optional[WorkflowError] = None):
+        init_error : Optional[Type[BaseModel]] = None):
 
         if init_error:
             return init_error
@@ -425,8 +427,8 @@ class WorkflowAdaptor:
         function_calls = self._read_json_output(output=llm_response)
 
         if function_calls is None:
-            return WorkflowError(
-                error_type = WorkflowErrorType.ADAPTOR_JSON,
+            return self.workflow_error(
+                error_type = self.workflow_error_types.ADAPTOR_JSON,
                 additional_info = {
                     "step_id" : step_id,
                     "error_messages" : ['Provided output is not json!']})
@@ -440,15 +442,15 @@ class WorkflowAdaptor:
                 current_function=current_function)
 
             if mapping_errors:
-                return WorkflowError(
-                    error_type = WorkflowErrorType.ADAPTOR_JSON,
+                return self.workflow_error(
+                    error_type = self.workflow_error_types.ADAPTOR_JSON,
                     additional_info = {
                         "step_id" : step_id,
                         "error_messages" : [erm for erm in mapping_errors]})
 
         except Exception as e:
-            return WorkflowError(
-                error_type = WorkflowErrorType.ADAPTOR_JSON,
+            return self.workflow_error(
+                error_type = self.workflow_error_types.ADAPTOR_JSON,
                 additional_info = {
                     "step_id" : step_id,
                     "error_messages" : [str(e)]})
@@ -529,7 +531,7 @@ class WorkflowAdaptor:
 
                 self.logger.debug(f"Attempt for {func_name}: {retry_i}")
 
-                if error.error_type is WorkflowErrorType.ADAPTOR_JSON:
+                if error.error_type is self.workflow_error_types.ADAPTOR_JSON:
 
                     mapping_errors = "\n ".join(iter(error.additional_info["error_messages"]))
                     retry_messages += [

@@ -32,9 +32,12 @@ class WorkflowItem(BaseModel):
 
     
 class TestedWorkflow(BaseModel):
-    workflow : List[WorkflowItem]
-    outputs : Dict[str, BaseModel]
-    error : Optional[BaseModel]
+    workflow : List[WorkflowItem] = Field(description="Planned and tested workflow.")
+    outputs : Dict[str, BaseModel] = Field(description="Outputs from test run.")
+    task_description : Optional[str] = Field(default = None, description="Description of the workflow.")
+    input_model : Optional[Type[BaseModel]] = Field(default = None, description="Input model for workflow.")
+    output_model : Optional[Type[BaseModel]] = Field(default = None, description="Output model for workflow.")
+    error : Optional[BaseModel] = Field(default = None, description="Error that happened during last run/test.")
 
     model_config = {
         "arbitrary_types_allowed": True
@@ -144,7 +147,8 @@ class WorkflowRunner:
         inputs : Type[BaseModel] = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
-        output_model : Type[BaseModel] = None,):
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None):
 
         """
         Runs llm planned workflow with provided inputs.
@@ -250,5 +254,10 @@ class WorkflowRunner:
             outputs[str(workflow_item["id"])] = output
 
 
-        return TestedWorkflow(workflow = workflow, outputs = outputs, error = error)
+        return TestedWorkflow(
+            workflow = workflow, 
+            outputs = outputs, 
+            input_model = input_model,
+            output_model = output_model,
+            error = error)
 

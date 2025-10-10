@@ -82,6 +82,8 @@ class WorkflowAutoAssembler:
     def _update_reset_logic(self, wa_resp : WorkflowAssemblerResponse):
 
         if wa_resp.tester_response.error is None:
+            wa_resp.planner_rerun_needed = False
+            wa_resp.adaptor_rerun_needed = False
             wa_resp.workflow_completed = True
             return wa_resp
         
@@ -115,7 +117,7 @@ class WorkflowAutoAssembler:
 
     async def plan_workflow(
         self,
-        task_description : str = None, 
+        task_description : str, 
         test_inputs : Type[BaseModel] = None, 
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,
@@ -161,10 +163,13 @@ class WorkflowAutoAssembler:
                 wa_resp.tester_response = self.runner_h.run_workflow(
                     workflow = wa_resp.adaptor_response.workflow, 
                     inputs = test_inputs,
+                    input_model = input_model,
                     output_model = output_model,
                     available_functions = available_functions,
                     available_callables = available_callables
                     )
+                if task_description:
+                    wa_resp.tester_response.task_description = task_description
                 
             wa_resp = self._update_reset_logic(
                 wa_resp = wa_resp
@@ -181,3 +186,86 @@ class WorkflowAutoAssembler:
         wa_resp.test_output = wa_resp.tester_response.outputs
 
         return wa_resp
+
+    async def run_workflow(
+        self,
+        workflow_object : WorkflowAssemblerResponse,
+        task_description : str = None, 
+        run_inputs : Type[BaseModel] = None, 
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None,
+        available_functions : List[LlmFunctionItem] = None,
+        available_callables : Dict[str, callable] = None,
+        max_retry : Optional[int] = None):
+
+        """
+        Uses LLM to plans workflow based on provided tools and description.
+        """
+
+        if max_retry is None:
+            max_retry = self.max_retry
+
+        wa_resp = workflow_object.copy()
+  
+
+        if input_model is None:
+            input_model = workflow_object.tester_response.input_model
+        if output_model is None:
+            output_model = workflow_object.tester_response.output_model
+
+        while wa_resp.test_retries in range(max_retry):
+
+            if wa_resp.planner_rerun_needed:
+
+                wa_resp.planner_response = await self.planner_h.generate_workflow(
+                    task_description=task_description,
+                    input_model = input_model,
+                    output_model = output_model,
+                    available_functions = available_functions,
+                    max_retry = max_retry,
+                    planned_workflow = wa_resp.planner_response
+                )
+
+            if wa_resp.adaptor_rerun_needed:
+
+                wa_resp.adaptor_response = await self.adaptor_h.adapt_workflow(
+                    workflow=wa_resp.planner_response.workflow, 
+                    input_model = input_model,
+                    output_model = output_model,
+                    available_functions = available_functions,
+                    max_retry = max_retry,
+                    adapted_workflow = wa_resp.adaptor_response
+                )
+
+            if run_inputs:
+
+                    
+                wa_resp.tester_response = self.runner_h.run_workflow(
+                    workflow = wa_resp.adaptor_response.workflow, 
+                    inputs = run_inputs,
+                    input_model = input_model,
+                    output_model = output_model,
+                    available_functions = available_functions,
+                    available_callables = available_callables
+                    )
+                if task_description:
+                    wa_resp.tester_response.task_description = task_description
+                else:
+                    task_description = wa_resp.tester_response.task_description
+                
+
+            wa_resp = self._update_reset_logic(
+                wa_resp = wa_resp
+            )
+
+            if wa_resp.workflow_completed:
+                break
+
+            wa_resp.test_retries += 1
+
+            self.logger.warning(f"Error : {wa_resp.tester_response.error.error_type} happened during testing. Attempts left {max_retry - wa_resp.test_retries} !")
+
+            
+        wa_resp.workflow = wa_resp.adaptor_response.workflow
+
+        return wa_resp.tester_response.outputs[str(len(wa_resp.test_output)-1)]

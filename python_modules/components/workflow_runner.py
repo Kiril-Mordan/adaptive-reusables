@@ -33,10 +33,8 @@ class WorkflowItem(BaseModel):
     
 class TestedWorkflow(BaseModel):
     workflow : List[WorkflowItem] = Field(description="Planned and tested workflow.")
+    inputs : BaseModel = Field(description="Inputs for test run.")
     outputs : Dict[str, BaseModel] = Field(description="Outputs from test run.")
-    task_description : Optional[str] = Field(default = None, description="Description of the workflow.")
-    input_model : Optional[Type[BaseModel]] = Field(default = None, description="Input model for workflow.")
-    output_model : Optional[Type[BaseModel]] = Field(default = None, description="Output model for workflow.")
     error : Optional[BaseModel] = Field(default = None, description="Error that happened during last run/test.")
 
     model_config = {
@@ -256,8 +254,7 @@ class WorkflowRunner:
 
         return TestedWorkflow(
             workflow = workflow, 
+            inputs = inputs,
             outputs = outputs, 
-            input_model = input_model,
-            output_model = output_model,
             error = error)
 

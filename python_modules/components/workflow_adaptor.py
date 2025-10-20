@@ -569,6 +569,14 @@ class WorkflowAdaptor:
                 init_messages = init_messages
             )
 
+    def _hash_string_sha256(self, input_string: str) -> str:
+        return hashlib.sha256(input_string.encode()).hexdigest()
+
+    def _make_uid(self, d: dict) -> str:
+
+        input_string = json.dumps(d)
+
+        return self._hash_string_sha256(input_string)
     
     def _mod_inputs_for_output_model(self, 
         workflow : List[dict],
@@ -580,17 +588,18 @@ class WorkflowAdaptor:
         available_functions_t = available_functions
         if output_model:
             workflow_s += [{'id': len(workflow) + 1 , 'name': 'output_model'}]
+            output_item = {
+                "name" : "output_model", 
+                "description" : "Schema to which relevant workflow outputs should be connected to.",
+                "input_schema_json" : output_model.model_json_schema(),
+                "output_schema_json" : output_model.model_json_schema(),
+            }
             available_functions_t += [LlmFunctionItem(
-                name="output_model", 
-                description="Schema to which relevant workflow outputs should be connected to.",
-                input_schema_json=output_model.model_json_schema(),
-                output_schema_json=output_model.model_json_schema(),
-                input_model=output_model,
-                output_model=output_model
+                func_id = self._make_uid(d = output_item),
+                **output_item
                 )]
 
         return workflow_s, available_functions_t
-
 
 
     def _add_fcall_ids(self, 
@@ -730,7 +739,11 @@ class WorkflowAdaptor:
             adapted_steps = await asyncio.gather(*adapt_tasks)
 
 
-            adapted_workflow = [{"id" : adapted_step.step_id, 'name' : adapted_step.func_name, 'args': adapted_step.adapted_schema} \
+            adapted_workflow = [{
+                "id" : adapted_step.step_id, 
+                "func_id" : [av.func_id for av in available_functions_t if av.name == adapted_step.func_name][0],
+                'name' : adapted_step.func_name, 
+                'args': adapted_step.adapted_schema} \
             for adapted_step in adapted_steps]
 
             adapted_fixed_workflow = self.input_collector_h.fix_literal_values(workflow, adapted_workflow)
@@ -779,6 +792,7 @@ class WorkflowAdaptor:
 
             adapted_workflow.workflow = [{
                 'id': wstep['id'], 
+                'func_id' : wstep['func_id'],
                 'name' : wstep['name'], 
                 'args' : reset_step.adapted_schema} if wstep['id'] == retried_step_id else wstep \
                 for wstep in adapted_workflow.workflow]

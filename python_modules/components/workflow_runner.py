@@ -198,7 +198,7 @@ class WorkflowRunner:
                 
                 try:
                     func_item = [av for av in available_functions \
-                        if av.name == workflow_item["name"]][0]
+                        if av.func_id == workflow_item["func_id"]][0]
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                     error_type = self.workflow_error_types.PLANNING_HF
@@ -224,7 +224,7 @@ class WorkflowRunner:
 
                 output_struct = self._run_func(
                     func_name = workflow_item["name"],
-                    func = available_callables[workflow_item["name"]],
+                    func = available_callables[workflow_item["func_id"]],
                     inputs = func_inputs
                 )
                 

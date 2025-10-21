@@ -7,7 +7,7 @@ import json
 from typing import Type
 from pydantic import BaseModel, Field
 
-from .components.wa_general_models import LlmFunctionItem, WorkflowErrorType, WorkflowError, create_function_item
+from .components.wa_general_models import LlmFunctionItem, WorkflowErrorType, WorkflowError, create_avc_items, LlmFunctionItemInput
 from .components.llm_function.llm_handler import LlmHandler
 from .components.workflow_planner import WorkflowPlanner, WorkflowPlannerResponse
 from .components.workflow_adaptor import WorkflowAdaptor, WorkflowAdaptorResponse
@@ -31,8 +31,8 @@ class PlanningStepsResp(BaseModel):
 
 class WorfklowDescription(BaseModel):
     task_description : Optional[str] = Field(default = None, description="Description of the workflow.")
-    input_model : Optional[Type[BaseModel]] = Field(default = None, description="Input model for workflow.")
-    output_model : Optional[Type[BaseModel]] = Field(default = None, description="Output model for workflow.")
+    input_model_json : Optional[dict] = Field(default = None, description="Input model for workflow.")
+    output_model_json : Optional[dict] = Field(default = None, description="Output model for workflow.")
 
 class AssembledWorkflow(BaseModel):
 
@@ -142,8 +142,8 @@ class WorkflowAutoAssembler:
         wa_resp = AssembledWorkflow(
             description = WorfklowDescription(
                 task_description = task_description,
-                input_model = input_model,
-                output_model = output_model
+                input_model_json = input_model.model_json_schema(),
+                output_model_json = output_model.model_json_schema()
             )
         )
 
@@ -222,9 +222,11 @@ class WorkflowAutoAssembler:
   
 
         if input_model is None:
-            input_model = workflow_object.description.input_model
+            input_model = self.runner_h.json_schema_to_base_model(
+                workflow_object.description.input_model_json)
         if output_model is None:
-            output_model = workflow_object.description.output_model
+            output_model = self.runner_h.json_schema_to_base_model(
+                workflow_object.description.output_model_json)
 
         while wa_resp.planning.test_retries in range(max_retry):
 

@@ -2,10 +2,27 @@
 The module contains general pydantic models used within workflow-agent components
 """
 
+import inspect
+import hashlib
 import json
 from typing import Type
-from pydantic import BaseModel, Field
+from collections.abc import Callable
+from pydantic import BaseModel, Field, SkipValidation
 from enum import Enum
+
+class LlmFunctionItemInput(BaseModel):
+
+    """
+    Function suitable for llm use.
+    """
+
+    func: SkipValidation[Callable[..., Any]]
+    input_model: Type[BaseModel]
+    output_model: Type[BaseModel]
+
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
 class LlmFunctionItem(BaseModel):
 
@@ -13,6 +30,7 @@ class LlmFunctionItem(BaseModel):
     Function suitable for llm use.
     """
 
+    func_id : str
     name : str
     description : str
     input_schema_json : dict
@@ -37,34 +55,81 @@ class WorkflowError(BaseModel):
         "arbitrary_types_allowed": True
     }
 
+def _hash_string_sha256(input_string: str) -> str:
+        return hashlib.sha256(input_string.encode()).hexdigest()
+
+def make_uid(d: dict) -> str:
+
+    input_string = json.dumps(d)
+
+    return _hash_string_sha256(input_string)
+
 def create_function_item(
-    func: callable, 
-    input_model: Type[BaseModel], 
-    output_model: Type[BaseModel]) -> dict:
-    """
-    Constructs a structured function item that includes:
-      - function name (extracted from the actual function's __name__)
-      - function description (extracted from the function's __doc__)
-      - JSON schema for the input model
-      - JSON schema for the output model
+  func: callable, 
+  input_model: Type[BaseModel], 
+  output_model: Type[BaseModel]) -> dict:
+  """
+  Constructs a structured function item that includes:
+    - function name (extracted from the actual function's __name__)
+    - function description (extracted from the function's __doc__)
+    - JSON schema for the input model
+    - JSON schema for the output model
 
-    Parameters:
-      func: The actual function (callable) object.
-      input_model: The Pydantic model class representing the function's input schema.
-      output_model: The Pydantic model class representing the function's output schema.
+  Parameters:
+    func: The actual function (callable) object.
+    input_model: The Pydantic model class representing the function's input schema.
+    output_model: The Pydantic model class representing the function's output schema.
 
-    Returns:
-      LlmFunctionItem with:
-        - "name": the function's name.
-        - "description": the function's description (docstring).
-        - "input_schema_json": the JSON schema (as a dict) for the input model.
-        - "output_schema_json": the JSON schema (as a dict) for the output model.
-        - "input_model": The Pydantic model class representing the function's input schema.
-        - "output_model": The Pydantic model class representing the function's output schema.
-    """
-    return LlmFunctionItem(
-        name = func.__name__,
-        description = func.__doc__.strip() if func.__doc__ else "",
-        input_schema_json = input_model.model_json_schema(),
-        output_schema_json = output_model.model_json_schema()
-    )
+  Returns:
+    LlmFunctionItem with:
+      - "func_id" : unique id of the function
+      - "name": the function's name.
+      - "description": the function's description (docstring).
+      - "input_schema_json": the JSON schema (as a dict) for the input model.
+      - "output_schema_json": the JSON schema (as a dict) for the output model.
+
+  """
+
+  llm_func_item = {
+    "name" : func.__name__,
+    "description" : func.__doc__.strip() if func.__doc__ else "",
+    "input_schema_json" : input_model.model_json_schema(),
+    "output_schema_json" : output_model.model_json_schema()
+  }
+
+  return LlmFunctionItem(
+      func_id = make_uid(d = {**llm_func_item, "code" : inspect.getsource(func)}),
+      **llm_func_item
+  )
+
+def create_avc_items(functions : List[LlmFunctionItemInput]):
+
+  """
+  Creates available functions and callables for Workflow Auto Assembler
+  """
+
+  llm_func_items = [{
+    "name" : fi.func.__name__,
+    "description" : fi.func.__doc__.strip() if fi.func.__doc__ else "",
+    "input_schema_json" : fi.input_model.model_json_schema(),
+    "output_schema_json" : fi.output_model.model_json_schema(),
+    "code" : inspect.getsource(fi.func)
+  } for fi in functions]
+
+  
+  available_functions = [
+    LlmFunctionItem(
+        func_id = make_uid(d = llm_func_item),
+        **{k : v for k,v in llm_func_item.items() if k != "code"}
+    ) for llm_func_item in llm_func_items
+  ]
+
+  available_callables = {
+    make_uid(d = llm_func_item) : fi.func \
+      for llm_func_item, fi in zip(llm_func_items,functions)
+  }
+
+  return {
+    "available_functions" : available_functions,
+    "available_callables" : available_callables
+  }

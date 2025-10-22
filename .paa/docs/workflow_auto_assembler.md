@@ -1,5 +1,5 @@
 ```python
-from workflow_auto_assembler import WorkflowAutoAssembler, WorkflowAssemblerResponse, create_function_item
+from workflow_auto_assembler import WorkflowAutoAssembler, AssembledWorkflow, create_avc_items, LlmFunctionItemInput
 ```
 
 ### 1. Define available tools
@@ -72,17 +72,12 @@ def query_database(inputs : QueryDatabaseInput) -> QueryDatabaseOutput:
     )
 
 # Create structured items for each function
-available_functions = [
-    create_function_item(get_weather, GetWeatherInput, GetWeatherOutput),
-    create_function_item(send_report_email, SendReportEmailInput, SendReportEmailOutput),
-    create_function_item(query_database, QueryDatabaseInput, QueryDatabaseOutput)
-]
 
-available_callables = {
-    "get_weather" : get_weather,
-    "send_report_email" : send_report_email,
-    "query_database" : query_database
-}
+available_tools = create_avc_items(functions = [
+    LlmFunctionItemInput(**{"func" : get_weather , "input_model" : GetWeatherInput, "output_model" : GetWeatherOutput}),
+    LlmFunctionItemInput(**{"func" : send_report_email , "input_model" : SendReportEmailInput, "output_model" : SendReportEmailOutput}),
+    LlmFunctionItemInput(**{"func" : query_database , "input_model" : QueryDatabaseInput, "output_model" : QueryDatabaseOutput})
+])
 ```
 
 ### 2. Define task, expected inputs and outputs
@@ -103,30 +98,24 @@ class WfOutputs(BaseModel):
 
 
 ```python
-WorkflowAssemblerResponse.model_fields
+AssembledWorkflow.model_fields
 ```
 
 
 
 
-    {'planner_response': FieldInfo(annotation=Union[WorkflowPlannerResponse, NoneType], required=False, default=None, description='Planning steps of workflow creation.'),
-     'adaptor_response': FieldInfo(annotation=Union[WorkflowAdaptorResponse, NoneType], required=False, default=None, description='Adapting step of workflow creation.'),
-     'tester_response': FieldInfo(annotation=Union[TestedWorkflow, NoneType], required=False, default=None, description='Testing step of workflow creation.'),
-     'testing_errors': FieldInfo(annotation=Union[List[WorkflowError], NoneType], required=False, default=[], description='Errors during testing workflow.'),
-     'planner_rerun_needed': FieldInfo(annotation=Union[bool, NoneType], required=False, default=True, description='Indicates if planner needs reset during retry.'),
-     'adaptor_rerun_needed': FieldInfo(annotation=Union[bool, NoneType], required=False, default=True, description='Indicates if adaptor needs reset during retry.'),
+    {'planning': FieldInfo(annotation=Union[PlanningStepsResp, NoneType], required=False, default=PlanningStepsResp(planner=None, adaptor=None, tester=None, planner_rerun_needed=True, adaptor_rerun_needed=True, testing_errors=[], test_retries=0), description='Responses from planning steps.'),
      'workflow_completed': FieldInfo(annotation=Union[bool, NoneType], required=False, default=False, description='Indicates if workflow was completed in the preset amount of retries.'),
-     'test_retries': FieldInfo(annotation=int, required=False, default=0, description='Retries completed during planning and testing loop.'),
-     'test_output': FieldInfo(annotation=Union[BaseModel, NoneType], required=False, default=None, description='Errors during testing workflow.'),
-     'workflow': FieldInfo(annotation=Union[dict, NoneType], required=False, default=None, description='Planned and tested workflow.')}
+     'workflow': FieldInfo(annotation=Union[dict, NoneType], required=False, default=None, description='Planned and tested workflow.'),
+     'description': FieldInfo(annotation=Union[WorfklowDescription, NoneType], required=False, default=WorfklowDescription(task_description=None, input_model_json=None, output_model_json=None), description='Workflow description.')}
 
 
 
 
 ```python
 wa = WorkflowAutoAssembler(
-    available_functions = available_functions,
-    available_callables = available_callables,
+    available_functions = available_tools["available_functions"],
+    available_callables = available_tools["available_callables"],
     llm_handler_params = {
         "llm_h_type" : "ollama",
         "llm_h_params" : {
@@ -150,47 +139,58 @@ wf_obj.workflow_completed
 ```
 
 
+
+
+    True
+
+
+
+
+```python
+wf_obj.planning.test_retries
+```
+
+
+
+
+    0
+
+
+
+
 ```python
 wf_obj.workflow
 ```
 
 
-```python
-wf_obj.test_output
-```
 
 
-```python
-TestedWorkflow.model_fields
-```
-
-
-
-
-    {'workflow': FieldInfo(annotation=List[WorkflowItem], required=True),
-     'outputs': FieldInfo(annotation=Dict[str, BaseModel], required=True),
-     'error': FieldInfo(annotation=Union[BaseModel, NoneType], required=True)}
-
-
-
-
-```python
-wf_obj['tested_wf_obj'].workflow
-```
-
-
-
-
-    [WorkflowItem(name='query_database', args={'topic': 'birds', 'location': '0.output.city'}),
-     WorkflowItem(name='get_weather', args={'city': '0.output.city'}),
-     WorkflowItem(name='send_report_email', args={'city': '0.output.city', 'information': [{'title': 'Bird Information', 'content': '1.output.info'}, {'title': 'Weather Condition', 'content': '2.output.condition'}]}),
-     WorkflowItem(name='output_model', args={'city': '0.output.city', 'information': [{'title': 'Bird Information', 'content': '1.output.info'}, {'title': 'Weather Condition', 'content': '2.output.condition'}]})]
+    [{'id': 1,
+      'func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac',
+      'name': 'query_database',
+      'args': {'topic': 'birds', 'location': '0.output.city'}},
+     {'id': 2,
+      'func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a',
+      'name': 'get_weather',
+      'args': {'city': '0.output.city'}},
+     {'id': 3,
+      'func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a',
+      'name': 'send_report_email',
+      'args': {'city': '0.output.city',
+       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+        {'title': 'Weather', 'content': '2.output.condition'}]}},
+     {'id': 4,
+      'func_id': '16a96f6083291385531909618374913abd08df9c4b3bbe0ac81969ae7856887f',
+      'name': 'output_model',
+      'args': {'city': '0.output.city',
+       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+        {'title': 'Weather', 'content': '2.output.condition'}]}}]
 
 
 
 
 ```python
-wf_obj['tested_wf_obj'].outputs
+wf_obj.planning.tester.outputs
 ```
 
 
@@ -200,11 +200,28 @@ wf_obj['tested_wf_obj'].outputs
      '1': QueryDatabaseOutput(info='Content extracted from the database for your query is ...', uid='0000'),
      '2': GetWeatherOutput(condition='Sunny', temperature=20.0, humidity=0.6),
      '3': SendReportEmailOutput(email_sent=True, message='Email sent to city of your choosing!'),
-     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Bird Information', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Weather Condition', content='Sunny')])}
+     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Bird Information', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Weather', content='Sunny')])}
 
 
+
+### 4. Run assembled workflow
 
 
 ```python
-wf_obj['tested_wf_obj'].error
+output = await wa.run_workflow(
+    workflow_object = wf_obj,
+    run_inputs = WfInputs(city = "London")
+)
+
+output.model_dump()
 ```
+
+
+
+
+    {'city': 'London',
+     'information': [{'title': 'Bird Information',
+       'content': 'Content extracted from the database for your query is ...'},
+      {'title': 'Weather', 'content': 'Sunny'}]}
+
+

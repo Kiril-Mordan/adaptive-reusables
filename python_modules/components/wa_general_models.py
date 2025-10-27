@@ -37,6 +37,7 @@ class LlmFunctionItem(BaseModel):
     output_schema_json : dict
 
 class WorkflowErrorType(Enum):
+    CHECK_JSON = "check_json"
     PLANNING_JSON = "planning_json"
     PLANNING_MISSOUTPUT = "planning_missoutput"
     PLANNING_HF = "planning_hf"

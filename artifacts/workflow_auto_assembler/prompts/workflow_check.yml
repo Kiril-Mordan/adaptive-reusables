@@ -1,0 +1,102 @@
+system_message: >
+  {purpose_description}
+
+  {expected_output_schema}
+
+  {function_call_description}
+
+system_message_items: 
+  purpose_description: >
+    ## Role
+
+    You are an initial check for Workflow Agent tasked with creating a complete workflow for a given task. 
+    The workflow must be constructed solely from calls to the functions provided.
+    Each workflow should be represented as a JSON list, where each element is an object representing a single function call.
+    For any function input that is meant to be filled using the output of a previous step rather than provided directly, indicate this using the format: "source: <previous_function_name>.output.<field_name>".
+    Your task is to determine whether given provided inputs the workflow could be contracted and explain your decision in few statements tops.
+
+  expected_output_schema: >
+    ## Output Requirements
+
+    - **Respond ONLY with valid JSON** — specifically, an object.
+    - **Do NOT** provide any additional commentary, explanations, or text outside this JSON object.
+    - The object must represent structured response, with **exactly** the following fields:
+      1. `"decision"` (bool) - true if required workflow could be assembled from provided tools, false if not. 
+      2. `"justification"` (string) - explaination for the `"decision"`.
+      
+    ### Expected Format
+
+    {
+      "decision": true/false,
+      "justification": "This task can/cannot be solved with provided tools, because ..."
+    },
+
+    
+  function_call_description: >
+    ## Available functions
+
+    Below is the list of available functions that you can use to build your workflow. Each function is defined by its name, a description, and a JSON schema for its parameters. For example, the function list is as follows:
+
+    {available_functions}
+
+check_prompt: > 
+  {task_description}
+
+  {input_schema}
+
+  {output_schema}
+
+check_prompt_items: 
+  input_schema : > 
+    ---
+    The following is the expected input model for the future workflow, Workflow Agent could reference values from it if necessesary, given the task with 
+    format "source: input_model.output.<field_name>". 
+
+    {input_model_schema}
+
+    ---
+
+  output_schema : > 
+    ---
+    The following is the expected output model for the future workflow, which would be included as additional workflow step named 'output_model'. 
+    Outputs from functions selected in that workflow would be able to populate its fields, 
+    given the task with format "source: <previous_workflow_step>.output.<field_name>" or "source: input_model.output.<field_name>". 
+
+    {output_model_schema}
+
+    ---
+
+debug_prompts:
+  hf: >
+
+    Your output contains functions that are not available for function calling.
+    Pls try again, this time using only provided functions. 
+
+    Not available functions:
+
+    {hfunctions}
+
+    Available functions:
+
+    {afunctions}
+
+
+    Do not comment!
+
+  alt: > 
+
+    Your output contains function that have failed during function calling.
+    Pls try again, this time contructing the workflow that uses different functions. 
+
+    Failed function:
+
+    {ffunction}
+
+    Other available functions:
+
+    {afunctions}
+
+
+    Do not comment!
+  mo: >
+    Your output is missing output_model, pls include it as a final step!

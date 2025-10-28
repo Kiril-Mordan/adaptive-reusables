@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from .components.wa_general_models import LlmFunctionItem, WorkflowErrorType, WorkflowError, create_avc_items, LlmFunctionItemInput
 from .components.llm_function.llm_handler import LlmHandler
+from .components.workflow_check import WorkflowCheck
 from .components.workflow_planner import WorkflowPlanner, WorkflowPlannerResponse
 from .components.workflow_adaptor import WorkflowAdaptor, WorkflowAdaptorResponse
 from .components.input_collector import InputCollector

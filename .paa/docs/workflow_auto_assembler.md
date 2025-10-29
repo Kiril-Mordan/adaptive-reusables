@@ -85,6 +85,7 @@ available_tools = create_avc_items(functions = [
 
 ```python
 task_description = """Query database to find information on birds and get latest weather for the city, then send an email there."""
+task_description = """Search internet for information on birds and get latest weather for the city, then send an email there."""
 
 class WfInputs(BaseModel):
     city: str = Field(..., description="Name of the city for which weather to be extracted.")
@@ -104,7 +105,9 @@ AssembledWorkflow.model_fields
 
 
 
-    {'planning': FieldInfo(annotation=Union[PlanningStepsResp, NoneType], required=False, default=PlanningStepsResp(planner=None, adaptor=None, tester=None, planner_rerun_needed=True, adaptor_rerun_needed=True, testing_errors=[], test_retries=0), description='Responses from planning steps.'),
+    {'init_check': FieldInfo(annotation=Union[WorkflowCheckResponse, NoneType], required=False, default=None, description='Initial check.'),
+     'planning': FieldInfo(annotation=Union[PlanningStepsResp, NoneType], required=False, default=PlanningStepsResp(planner=None, adaptor=None, tester=None, planner_rerun_needed=True, adaptor_rerun_needed=True, testing_errors=[], test_retries=0), description='Responses from planning steps.'),
+     'workflow_possible': FieldInfo(annotation=Union[bool, NoneType], required=False, default=None, description='Indicates if workflow could be planned given provided tools.'),
      'workflow_completed': FieldInfo(annotation=Union[bool, NoneType], required=False, default=False, description='Indicates if workflow was completed in the preset amount of retries.'),
      'workflow': FieldInfo(annotation=Union[dict, NoneType], required=False, default=None, description='Planned and tested workflow.'),
      'description': FieldInfo(annotation=Union[WorfklowDescription, NoneType], required=False, default=WorfklowDescription(task_description=None, input_model_json=None, output_model_json=None), description='Workflow description.')}
@@ -132,6 +135,18 @@ wf_obj = await wa.plan_workflow(
     test_inputs = WfInputs(city = "Berlin")
 )
 ```
+
+
+```python
+wf_obj.workflow_possible
+```
+
+
+
+
+    True
+
+
 
 
 ```python
@@ -168,7 +183,7 @@ wf_obj.workflow
     [{'id': 1,
       'func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac',
       'name': 'query_database',
-      'args': {'topic': 'birds', 'location': '0.output.city'}},
+      'args': {'topic': 'birds'}},
      {'id': 2,
       'func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a',
       'name': 'get_weather',
@@ -177,13 +192,13 @@ wf_obj.workflow
       'func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a',
       'name': 'send_report_email',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+       'information': [{'title': 'Birds', 'content': '1.output.info'},
         {'title': 'Weather', 'content': '2.output.condition'}]}},
      {'id': 4,
       'func_id': '16a96f6083291385531909618374913abd08df9c4b3bbe0ac81969ae7856887f',
       'name': 'output_model',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+       'information': [{'title': 'Birds', 'content': '1.output.info'},
         {'title': 'Weather', 'content': '2.output.condition'}]}}]
 
 
@@ -200,7 +215,7 @@ wf_obj.planning.tester.outputs
      '1': QueryDatabaseOutput(info='Content extracted from the database for your query is ...', uid='0000'),
      '2': GetWeatherOutput(condition='Sunny', temperature=20.0, humidity=0.6),
      '3': SendReportEmailOutput(email_sent=True, message='Email sent to city of your choosing!'),
-     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Bird Information', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Weather', content='Sunny')])}
+     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Birds', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Weather', content='Sunny')])}
 
 
 
@@ -220,7 +235,7 @@ output.model_dump()
 
 
     {'city': 'London',
-     'information': [{'title': 'Bird Information',
+     'information': [{'title': 'Birds',
        'content': 'Content extracted from the database for your query is ...'},
       {'title': 'Weather', 'content': 'Sunny'}]}
 

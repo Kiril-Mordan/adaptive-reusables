@@ -314,6 +314,9 @@ class WorkflowCheck:
                 llm_response = debug_response['message']['content']
                 continue
 
+            if error.error_type is self.workflow_error_types.CHECK_INIT:
+                break
+
             
         if retry_i == max_retry:
             return WorkflowCheckResponse(

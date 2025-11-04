@@ -6,6 +6,7 @@ workflow for described task based on provided tools.
 import attrs
 import attrsx
 
+from copy import deepcopy
 import yaml
 import os
 
@@ -57,7 +58,10 @@ class WorkflowPlanner:
     plan_prompt_items : Dict[str, str] = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
-    available_functions : list = attrs.field(default=None)
+    available_functions: List[LlmFunctionItem] = attrs.field(
+        default=None,
+        converter=lambda v: None if v is None else deepcopy(v),
+    )
 
     max_retry : int = attrs.field(default=5)
 
@@ -290,6 +294,9 @@ class WorkflowPlanner:
             llm_response = json.dumps(planned_workflow.workflow)
             retry_i = planned_workflow.retries
             errors = planned_workflow.errors
+            if len(errors) == 0:
+                self.logger.error("Planner recieved `planned_workflow` input for retry that doesn not contain any errors!")
+                return planned_workflow
             init_error = errors[-1]
             include_input = planned_workflow.include_input
             include_output = planned_workflow.include_output

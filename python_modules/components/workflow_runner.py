@@ -4,6 +4,7 @@ This module contains methods to run and test llm generated and adapted workflows
 
 import attrs
 import attrsx
+from copy import deepcopy
 
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any, Type
@@ -27,8 +28,8 @@ class WorkflowItem(BaseModel):
     Workflow item.
     """
 
-    name : str
-    args : dict
+    name : str = Field(description="Name of workflow step.")
+    args : Optional[dict] = Field(description="Inputs for workflow step.")
 
     
 class TestedWorkflow(BaseModel):
@@ -47,8 +48,16 @@ class WorkflowRunner:
     workflow_error_types = attrs.field()
     workflow_error = attrs.field()
 
-    available_callables : Dict[str, callable] = attrs.field(default=None)
-    available_functions : List[LlmFunctionItem] = attrs.field(default=None)
+    
+    available_functions: List[LlmFunctionItem] = attrs.field(
+        default=None,
+        converter=lambda v: None if v is None else deepcopy(v),
+    )
+
+    available_callables: Dict[str, Callable] = attrs.field(
+        default=None,
+        converter=lambda v: None if v is None else dict(v),
+    )
 
     def _run_func(self, 
         func_name : str,
@@ -244,7 +253,10 @@ class WorkflowRunner:
                     error_type = self.workflow_error_types.OUTPUTS
                     error = self.workflow_error(
                         error_message = error_message,
-                        error_type = error_type
+                        error_type = error_type,
+                        additional_info = {
+                            "step_id" : workflow_item["id"],
+                            "error_messages" : [error_message]}
                     )
                     break
 

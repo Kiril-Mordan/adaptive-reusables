@@ -155,6 +155,7 @@ class WorkflowAdaptor:
             function_calls = json.loads(output)
         except Exception as e:
             self.logger.error(f"Failed to extract json from {output}")
+            self.logger.error(f"Problem with JSON: {e}")
             return None
 
         return function_calls

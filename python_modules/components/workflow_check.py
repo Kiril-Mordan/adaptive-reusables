@@ -60,6 +60,7 @@ class WorkflowCheck:
     prompts_filepath : str = attrs.field(default=None)
     available_functions : list = attrs.field(default=None)
 
+    n_checks : int = attrs.field(default=5)
     max_retry : int = attrs.field(default=5)
 
     """
@@ -222,6 +223,22 @@ class WorkflowCheck:
         
         return None
 
+    async def _get_llm_response(self, messages, n_checks):
+
+        requests = [self.llm_h.chat(messages) for i in range(n_checks)]
+
+        responses = await asyncio.gather(*requests)
+        llm_responses = [response['message']['content'] for response in responses] 
+
+        checked_workflow_items_v = [self._read_json_output(output=llm_response) for llm_response in llm_responses] 
+        decisions = [checked_workflow_items["decision"] for checked_workflow_items in checked_workflow_items_v if checked_workflow_items is not None]
+        llm_response_p = [llm_response for llm_response, decision in zip(llm_responses, decisions) if decision]
+        if llm_response_p:
+            llm_response = llm_response_p[0]
+        else:
+            llm_response = llm_responses[0]
+
+        return llm_response
 
     async def check_workflow(
         self,
@@ -230,6 +247,7 @@ class WorkflowCheck:
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,
         max_retry : Optional[int] = None,
+        n_checks : Optional[int] = None,
         checked_workflow : Optional[WorkflowCheckResponse] = None) -> WorkflowCheckResponse:
 
         """
@@ -244,6 +262,9 @@ class WorkflowCheck:
 
         if max_retry is None:
             max_retry = self.max_retry
+
+        if n_checks is None:
+            n_checks = self.n_checks
 
         if available_functions is None:
             available_functions = self.available_functions
@@ -260,8 +281,7 @@ class WorkflowCheck:
                 output_model = output_model
             )
 
-            response = await self.llm_h.chat(init_messages)
-            llm_response = response['message']['content']
+            llm_response = await self._get_llm_response(messages = init_messages, n_checks = n_checks)
 
             retry_i = 0
             errors = []
@@ -310,7 +330,7 @@ class WorkflowCheck:
             self.logger.debug(f"Attempt: {retry_i}")
 
             if error.error_type is self.workflow_error_types.CHECK_JSON:
-                debug_response = await self.llm_h.chat(retry_messages)
+                debug_response = await self._get_llm_response(messages = retry_messages, n_checks = n_checks)
                 llm_response = debug_response['message']['content']
                 continue
 

@@ -281,7 +281,7 @@ class WorkflowPlanner:
             )
 
             response = await self.llm_h.chat(init_messages)
-            llm_response = response['message']['content']
+            llm_response = response.message.content
 
             retry_i = 0
             errors = []
@@ -332,7 +332,7 @@ class WorkflowPlanner:
 
             if error.error_type is self.workflow_error_types.PLANNING_JSON:
                 debug_response = await self.llm_h.chat(retry_messages)
-                llm_response = debug_response['message']['content']
+                llm_response = debug_response.message.content
                 continue
 
             if error.error_type is self.workflow_error_types.PLANNING_MISSOUTPUT:
@@ -343,7 +343,7 @@ class WorkflowPlanner:
                 ]
 
                 debug_response = await self.llm_h.chat(retry_messages)
-                llm_response = debug_response['message']['content']
+                llm_response = debug_response.message.content
                 continue
 
             if error.error_type is self.workflow_error_types.PLANNING_HF:
@@ -363,7 +363,7 @@ class WorkflowPlanner:
                 ]
 
                 debug_response = await self.llm_h.chat(retry_messages)
-                llm_response = debug_response['message']['content']
+                llm_response = debug_response.message.content
                 continue
 
             if error.error_type is self.workflow_error_types.RUNNER:
@@ -385,7 +385,7 @@ class WorkflowPlanner:
                 ]
 
                 debug_response = await self.llm_h.chat(retry_messages)
-                llm_response = debug_response['message']['content']
+                llm_response = debug_response.message.content
                 continue
 
         if retry_i == max_retry:

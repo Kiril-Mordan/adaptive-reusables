@@ -1,11 +1,43 @@
 import logging
 import attrsx
 import attrs
-
+from datetime import datetime
 from typing import Optional, List, Dict
 
 #! import openai
 #! import ollama
+
+  
+
+class LlmHandlerBaseResponse(BaseModel):
+    """
+    Follows Ollama BaseGenerateResponse model
+    """
+
+    model: Optional[str] = Field(default = None, description ='Model used to generate response.')
+    created_at: Optional[str] = Field(default = None, description ='Time when the request was created.')
+    total_duration: Optional[int] = Field(default = None, description ='Total duration in nanoseconds.')
+
+
+class LlmMessage(BaseModel):
+  """
+  Chat message based on Ollama.
+  """
+
+  role: str = Field(description ="Assumed role of the message. Response messages has role 'assistant' or 'tool'.")  
+  content: Optional[str] = Field(default = None, description ="Content of the message. Response messages contains message fragments when streaming.")
+  thinking: Optional[str] = Field(default = None, description ="Thinking content. Only present when thinking is enabled.")
+
+
+class LlmHandlerChatOutput(LlmHandlerBaseResponse):
+
+    """
+    Follows Ollama ChatResponse model
+    """
+
+    message: Optional[LlmMessage] = Field(default = None, description ='Response message.')
+    
+
 
 @attrsx.define
 class OllamaHandlerAsync():
@@ -39,13 +71,9 @@ class OllamaHandlerAsync():
 
     async def chat(self, 
                    messages: List[Dict[str, str]], 
-                   model_name: Optional[str] = None,
-                   tools: Optional[List[Dict]] = None, 
-                   tool_choice: Optional[str] = None) -> Dict:
+                   model_name: Optional[str] = None) -> LlmHandlerChatOutput:
         """
-        Core chat method for Ollama with native function calling (tools).
-        - Supports passing tools to the model for function calling.
-        - Falls back to prompt-based simulation if tools are not provided.
+        Core chat method for Ollama .
         """
 
         params = {
@@ -53,47 +81,20 @@ class OllamaHandlerAsync():
             "messages": messages
         }
 
-        # Add tools if provided
-        if tools:
-            params["tools"] = tools
-
-            if tool_choice:
-                params["tool_choice"] = tool_choice  # Optional specific tool selection
-
 
         response = await self.model.chat(**params)
         self.logger.debug(f"Tokens used: {response.get('usage', {}).get('total_tokens', 0)}")
-        
-        # Convert response to dict
-        response_dict = {
-            "model": response.model,
-            "created_at": response.created_at,
-            "done": response.done,
-            "done_reason": response.done_reason,
-            "total_duration": response.total_duration,
-            "load_duration": response.load_duration,
-            "prompt_eval_count": response.prompt_eval_count,
-            "prompt_eval_duration": response.prompt_eval_duration,
-            "eval_count": response.eval_count,
-            "eval_duration": response.eval_duration,
-            "message": {
-                "role": response.message.role,
-                "content": response.message.content,
-                "tool_calls": []
-            }
-        }
 
-        if response.message.tool_calls:
-            response_dict["message"]["tool_calls"] = [
-                    {
-                        "function": {
-                            "name": call.function.name,
-                            "arguments": call.function.arguments
-                        }
-                    } for call in response.message.tool_calls
-                ]
 
-        return response_dict
+        return LlmHandlerChatOutput(
+            model = response.model,
+            created_at = response.created_at,
+            total_duration = response.total_duration,
+            message = LlmMessage(
+                role = response.message.role,
+                content = response.message.content
+            )
+        )
             
 
     
@@ -132,11 +133,9 @@ class OpenAIHandlerAsync:
 
     async def chat(self, 
                    messages: List[Dict[str, str]], 
-                   model_name: Optional[str] = None,
-                   tools: Optional[List[Dict]] = None, 
-                   tool_choice: Optional[str] = None) -> Dict:
+                   model_name: Optional[str] = None) -> LlmHandlerChatOutput:
         """
-        Core chat method for OpenAI with native function calling (tools).
+        Core chat method for OpenAI.
         """
 
         params = {
@@ -145,26 +144,21 @@ class OpenAIHandlerAsync:
             **self.kwargs
         }
 
-        # Add tools if provided
-        if tools:
-            params["tools"] = tools
-
-            if tool_choice:
-                params["tool_choice"] = tool_choice  # Optional: Force specific tool selection
-
-        
+        exec_start = datetime.now()
         response = await self.model.ChatCompletion.acreate(**params)
         self.logger.debug(f"Tokens used: {response['usage']['total_tokens']}")
         
-        # Convert response to dict
-        response_dict = {
-            "model": response["model"],
-            "created_at": response["created"],
-            "choices": response["choices"],
-            "usage": response["usage"]
-        }
-        
-        return response_dict
+
+        return LlmHandlerChatOutput(
+            model = response["model"],
+            created_at = response["created"],
+            total_duration = datetime.now() - exec_start,
+            message = LlmMessage(
+                role = response["choices"][0].message.role,
+                content = response["choices"][0].message.content,
+            )
+
+        )
 
 
 @attrsx.define
@@ -195,33 +189,16 @@ class LlmHandler:
 
     async def chat(self, 
                    messages: List[Dict[str, str]], 
-                   model_name: Optional[str] = None,
-                   tool_descriptions : Optional[List[Dict]] = None, 
-                   tools: Optional[List[Dict]] = None, 
-                   tool_choice: Optional[str] = None) -> Dict:
+                   model_name: Optional[str] = None) -> LlmHandlerChatOutput:
         """
-        Core chat method with native function calling (tools).
+        Core chat method.
         """
         
         try:
 
-            # Inject system message with tool descriptions if provided
-            if tool_descriptions:
-                tool_description_text = "\n".join(
-                    [f"{tool['name']}: {tool['description']}" for tool in tool_descriptions]
-                )
-                system_message = {
-                    "role": "system",
-                    "content": f"The following tools are available for function calling:\n{tool_description_text}"
-                }
-                # Prepend system message to the beginning of the chat
-                messages.insert(0, system_message)
-
             response = await self.llm_h.chat(
                 messages = messages,
-                model_name = model_name,
-                tools = tools,
-                tool_choice = tool_choice)
+                model_name = model_name)
 
         except Exception as e:
             response = None

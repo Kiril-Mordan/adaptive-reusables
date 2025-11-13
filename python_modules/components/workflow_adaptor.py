@@ -488,7 +488,7 @@ class WorkflowAdaptor:
                 init_error = None
 
                 response = await self.llm_h.chat(init_messages)
-                llm_response = response['message']['content']
+                llm_response = response.message.content
             else:
                 step_id = adapted_step.step_id
                 init_messages = adapted_step.init_messages
@@ -542,7 +542,7 @@ class WorkflowAdaptor:
                     ]
 
                     debug_response = await self.llm_h.chat(retry_messages)
-                    llm_response = debug_response['message']['content']
+                    llm_response = debug_response.message.content
                     continue
             
         else:

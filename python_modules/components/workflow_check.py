@@ -228,7 +228,7 @@ class WorkflowCheck:
         requests = [self.llm_h.chat(messages) for i in range(n_checks)]
 
         responses = await asyncio.gather(*requests)
-        llm_responses = [response['message']['content'] for response in responses] 
+        llm_responses = [response.message.content for response in responses] 
 
         checked_workflow_items_v = [self._read_json_output(output=llm_response) for llm_response in llm_responses] 
         decisions = [checked_workflow_items["decision"] for checked_workflow_items in checked_workflow_items_v if checked_workflow_items is not None]

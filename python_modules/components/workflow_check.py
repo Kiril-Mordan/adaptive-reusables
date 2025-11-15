@@ -330,8 +330,7 @@ class WorkflowCheck:
             self.logger.debug(f"Attempt: {retry_i}")
 
             if error.error_type is self.workflow_error_types.CHECK_JSON:
-                debug_response = await self._get_llm_response(messages = retry_messages, n_checks = n_checks)
-                llm_response = debug_response['message']['content']
+                llm_response = await self._get_llm_response(messages = retry_messages, n_checks = n_checks)
                 continue
 
             if error.error_type is self.workflow_error_types.CHECK_INIT:

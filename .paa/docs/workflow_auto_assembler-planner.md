@@ -125,10 +125,10 @@ planned_workflow_obj.workflow
      {'name': 'get_weather', 'args': {'city': 'Berlin'}},
      {'name': 'send_report_email',
       'args': {'city': 'Berlin',
-       'information': [{'title': 'Birds Information',
+       'information': [{'title': 'Bird information',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather Condition',
-         'content': 'source: get_weather.output.condition'}]}}]
+        {'title': 'Weather',
+         'content': 'source: get_weather.output.condition, source: get_weather.output.temperature'}]}}]
 
 
 
@@ -151,14 +151,14 @@ planned_workflow_obj_a.workflow
 
 
 
-    [{'name': 'query_database', 'args': {'topic': 'birds'}},
+    [{'name': 'query_database',
+      'args': {'topic': 'birds', 'location': 'source: input_model.output.city'}},
      {'name': 'get_weather', 'args': {'city': 'source: input_model.output.city'}},
      {'name': 'send_report_email',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Bird Information',
+       'information': [{'title': 'Birds Info',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather Condition',
-         'content': 'source: get_weather.output.condition'}]}}]
+        {'title': 'Weather', 'content': 'source: get_weather.output.condition'}]}}]
 
 
 
@@ -193,12 +193,14 @@ planned_workflow_obj_b.workflow
       'args': {'city': 'source: input_model.output.city',
        'information': [{'title': 'Birds Information',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather', 'content': 'source: get_weather.output.condition'}]}},
+        {'title': 'Current Weather',
+         'content': 'source: get_weather.output.condition'}]}},
      {'name': 'output_model',
       'args': {'city': 'source: input_model.output.city',
        'information': [{'title': 'Birds Information',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather', 'content': 'source: get_weather.output.condition'}]}}]
+        {'title': 'Current Weather',
+         'content': 'source: get_weather.output.condition'}]}}]
 
 
 
@@ -302,13 +304,13 @@ planned_workflow_obj_tb.workflow
       'args': {'city': 'source: input_model.output.city',
        'information': [{'title': 'Birds Information',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather',
+        {'title': 'Current Weather',
          'content': 'source: get_weather_report.output.condition'}]}},
      {'name': 'output_model',
       'args': {'city': 'source: input_model.output.city',
        'information': [{'title': 'Birds Information',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather',
+        {'title': 'Current Weather',
          'content': 'source: get_weather_report.output.condition'}]}}]
 
 
@@ -371,6 +373,7 @@ planned_workflow_obj_tb3 = await wp3.generate_workflow(planned_workflow = planne
 
     DEBUG:WorkflowPlanner:Attempt: 1
     DEBUG:WorkflowPlanner:Attempt: 2
+    DEBUG:WorkflowPlanner:Attempt: 3
 
 
 
@@ -382,9 +385,9 @@ planned_workflow_obj_tb3.workflow
 
 
     [{'name': 'query_database', 'args': {'topic': 'birds'}},
-     {'name': 'get_weather', 'args': {'city': 'source: WfInputs.output.city'}},
+     {'name': 'get_weather', 'args': {'city': 'source: input_model.output.city'}},
      {'name': 'send_report_email',
-      'args': {'city': 'source: WfInputs.output.city',
+      'args': {'city': 'source: input_model.output.city',
        'information': [{'title': 'Weather Condition',
          'content': 'source: get_weather.output.condition'},
         {'title': 'Temperature',
@@ -392,7 +395,7 @@ planned_workflow_obj_tb3.workflow
         {'title': 'Birds Info',
          'content': 'source: query_database.output.info'}]}},
      {'name': 'output_model',
-      'args': {'city': 'source: WfInputs.output.city',
+      'args': {'city': 'source: input_model.output.city',
        'information': [{'title': 'Weather Condition',
          'content': 'source: get_weather.output.condition'},
         {'title': 'Temperature',

@@ -146,12 +146,10 @@ adapted_workflow_obj.workflow
 ```
 
     DEBUG:WorkflowAdaptor:Attempt for send_report_email: 1
-    DEBUG:WorkflowAdaptor:Attempt for send_report_email: 2
-    DEBUG:WorkflowAdaptor:Attempt for send_report_email: 3
     DEBUG:InputCollector:og_leaves : {'[0].args.topic': 'birds', '[1].args.city': 'Berlin', '[2].args.city': 'Berlin', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': 'source: query_database.output.info', '[2].args.information[1].title': 'Current Weather Condition', '[2].args.information[1].content': 'source: get_weather.output.condition', '[2].args.information[2].title': 'Temperature (C)', '[2].args.information[2].content': 'source: get_weather.output.temperature'}
-    DEBUG:InputCollector:mod_leaves : {'[0].id': '1', '[0].func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac', '[0].args.topic': 'birds', '[1].id': '2', '[1].func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a', '[1].args.city': 'Berlin', '[2].id': '3', '[2].func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a', '[2].args.city': 'Berlin', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': '1.output.info', '[2].args.information[1].title': 'Current Weather Condition', '[2].args.information[1].content': '2.output.condition', '[2].args.information[2].title': 'Temperature (C)', '[2].args.information[2].content': ''}
+    DEBUG:InputCollector:mod_leaves : {'[0].id': '1', '[0].func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac', '[0].args.topic': 'birds', '[1].id': '2', '[1].func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a', '[1].args.city': 'Berlin', '[2].id': '3', '[2].func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a', '[2].args.city': 'Berlin', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': '1.output.info', '[2].args.information[1].title': 'Current Weather Condition', '[2].args.information[1].content': '2.output.condition'}
     DEBUG:InputCollector:ic_results : ['literal', 'literal', 'literal', 'literal', 'reference', 'literal', 'reference', 'literal', 'reference']
-    DEBUG:InputCollector:new_values : ['birds', 'Berlin', 'Berlin', 'Birds Information', '1.output.info', 'Current Weather Condition', '2.output.condition', 'Temperature (C)', '']
+    DEBUG:InputCollector:new_values : ['birds', 'Berlin', 'Berlin', 'Birds Information', '1.output.info', 'Current Weather Condition', '2.output.condition', 'Temperature (C)', None]
 
 
 
@@ -170,8 +168,7 @@ adapted_workflow_obj.workflow
       'name': 'send_report_email',
       'args': {'city': 'Berlin',
        'information': [{'title': 'Birds Information', 'content': '1.output.info'},
-        {'title': 'Current Weather Condition', 'content': '2.output.condition'},
-        {'title': 'Temperature (C)', 'content': ''}]}}]
+        {'title': 'Current Weather Condition', 'content': '2.output.condition'}]}}]
 
 
 

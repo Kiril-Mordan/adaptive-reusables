@@ -6,7 +6,7 @@ from workflow_auto_assembler import WorkflowAutoAssembler, AssembledWorkflow, cr
 
 
 ```python
-from typing import Type
+from typing import Type, List
 from pydantic import BaseModel, Field
 
 # --- Example usage ---
@@ -71,12 +71,31 @@ def query_database(inputs : QueryDatabaseInput) -> QueryDatabaseOutput:
         uid = "0000"
     )
 
+# 4. query_web function
+
+class QueryWebInput(BaseModel):
+    search_input: str = Field(..., description="Topic to be searched on the web.")
+
+
+class QueryWebOutput(BaseModel):
+    search_results: List[str] = Field(..., description="List relevant info from search results.")
+
+
+def query_web(inputs : QueryWebInput) -> QueryWebOutput:
+    """Get information from the internet for provided query."""
+    return QueryWebOutput(
+        search_results = ["Relevant content found in first search result is ..."],
+    )
+
+
+
 # Create structured items for each function
 
 available_tools = create_avc_items(functions = [
     LlmFunctionItemInput(**{"func" : get_weather , "input_model" : GetWeatherInput, "output_model" : GetWeatherOutput}),
     LlmFunctionItemInput(**{"func" : send_report_email , "input_model" : SendReportEmailInput, "output_model" : SendReportEmailOutput}),
-    LlmFunctionItemInput(**{"func" : query_database , "input_model" : QueryDatabaseInput, "output_model" : QueryDatabaseOutput})
+    LlmFunctionItemInput(**{"func" : query_database , "input_model" : QueryDatabaseInput, "output_model" : QueryDatabaseOutput}),
+    LlmFunctionItemInput(**{"func" : query_web , "input_model" : QueryWebInput, "output_model" : QueryWebOutput})
 ])
 ```
 
@@ -85,7 +104,6 @@ available_tools = create_avc_items(functions = [
 
 ```python
 task_description = """Query database to find information on birds and get latest weather for the city, then send an email there."""
-task_description = """Search internet for information on birds and get latest weather for the city, then send an email there."""
 
 class WfInputs(BaseModel):
     city: str = Field(..., description="Name of the city for which weather to be extracted.")
@@ -105,7 +123,9 @@ AssembledWorkflow.model_fields
 
 
 
-    {'init_check': FieldInfo(annotation=Union[WorkflowCheckResponse, NoneType], required=False, default=None, description='Initial check.'),
+    {'id': FieldInfo(annotation=str, required=True, description='Unique id for task based on hash of inputs'),
+     'input_id': FieldInfo(annotation=str, required=True, description='Unique id for task inputs based on hash of inputs'),
+     'init_check': FieldInfo(annotation=Union[WorkflowCheckResponse, NoneType], required=False, default=None, description='Initial check.'),
      'planning': FieldInfo(annotation=Union[PlanningStepsResp, NoneType], required=False, default=PlanningStepsResp(planner=None, adaptor=None, tester=None, planner_rerun_needed=True, adaptor_rerun_needed=True, testing_errors=[], test_retries=0), description='Responses from planning steps.'),
      'workflow_possible': FieldInfo(annotation=Union[bool, NoneType], required=False, default=None, description='Indicates if workflow could be planned given provided tools.'),
      'workflow_completed': FieldInfo(annotation=Union[bool, NoneType], required=False, default=False, description='Indicates if workflow was completed in the preset amount of retries.'),
@@ -135,6 +155,18 @@ wf_obj = await wa.plan_workflow(
     test_inputs = WfInputs(city = "Berlin")
 )
 ```
+
+
+```python
+wf_obj.id
+```
+
+
+
+
+    '7c431c4e-88e5-48e7-84b3-d1f3b5f56d26'
+
+
 
 
 ```python
@@ -192,14 +224,15 @@ wf_obj.workflow
       'func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a',
       'name': 'send_report_email',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Birds', 'content': '1.output.info'},
-        {'title': 'Weather', 'content': '2.output.condition'}]}},
+       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+        {'title': 'Condition', 'content': '2.output.condition'}]}},
      {'id': 4,
       'func_id': '16a96f6083291385531909618374913abd08df9c4b3bbe0ac81969ae7856887f',
       'name': 'output_model',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Birds', 'content': '1.output.info'},
-        {'title': 'Weather', 'content': '2.output.condition'}]}}]
+       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+        {'title': 'Condition', 'content': '2.output.condition'},
+        {'title': 'Temperature', 'content': '25C'}]}}]
 
 
 
@@ -215,7 +248,7 @@ wf_obj.planning.tester.outputs
      '1': QueryDatabaseOutput(info='Content extracted from the database for your query is ...', uid='0000'),
      '2': GetWeatherOutput(condition='Sunny', temperature=20.0, humidity=0.6),
      '3': SendReportEmailOutput(email_sent=True, message='Email sent to city of your choosing!'),
-     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Birds', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Weather', content='Sunny')])}
+     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Bird Information', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Condition', content='Sunny'), EmailInformationPoint(title='Temperature', content='25C')])}
 
 
 
@@ -235,8 +268,9 @@ output.model_dump()
 
 
     {'city': 'London',
-     'information': [{'title': 'Birds',
+     'information': [{'title': 'Bird Information',
        'content': 'Content extracted from the database for your query is ...'},
-      {'title': 'Weather', 'content': 'Sunny'}]}
+      {'title': 'Condition', 'content': 'Sunny'},
+      {'title': 'Temperature', 'content': '25C'}]}
 
 

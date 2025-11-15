@@ -134,7 +134,7 @@ checked_workflow_obj.workflow_possible
 print(checked_workflow_obj.justification)
 ```
 
-    The task can be accomplished by chaining the available tools: use query_database with topic "birds" to retrieve bird information, call get_weather with city "Berlin" for weather data, and finally use send_report_email to send both pieces of information to Berlin. Each function is provided and can be combined in a sequential workflow.
+    All required actions can be performed using the available functions. We can query the database for 'birds', get the weather for Berlin, combine those results into information points, and send an email to Berlin with those points.
 
 
 #### 2. Check simple workflow using available functions (no output model)
@@ -168,7 +168,7 @@ checked_workflow_obj.workflow_possible
 print(checked_workflow_obj.justification)
 ```
 
-    The task can be accomplished by chaining the available tools: use query_database with topic "birds" to retrieve bird information, call get_weather with city "Berlin" for weather data, and finally use send_report_email to send both pieces of information to Berlin. Each function is provided and can be combined in a sequential workflow.
+    All required actions can be performed using the available functions. We can query the database for 'birds', get the weather for Berlin, combine those results into information points, and send an email to Berlin with those points.
 
 
 #### 3. Check simple workflow using available functions
@@ -207,5 +207,5 @@ checked_workflow_obj.workflow_possible
 print(checked_workflow_obj.justification)
 ```
 
-    The task can be accomplished by chaining the available tools: use query_database with topic "birds" to retrieve bird information, call get_weather with city "Berlin" for weather data, and finally use send_report_email to send both pieces of information to Berlin. Each function is provided and can be combined in a sequential workflow.
+    All required actions can be performed using the available functions. We can query the database for 'birds', get the weather for Berlin, combine those results into information points, and send an email to Berlin with those points.
 

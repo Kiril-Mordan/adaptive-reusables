@@ -5,7 +5,7 @@ The module contains general pydantic models used within workflow-agent component
 import inspect
 import hashlib
 import json
-from typing import Type
+from typing import Type, get_type_hints
 from collections.abc import Callable
 from pydantic import BaseModel, Field, SkipValidation
 from enum import Enum
@@ -17,8 +17,8 @@ class LlmFunctionItemInput(BaseModel):
     """
 
     func: SkipValidation[Callable[..., Any]]
-    input_model: Type[BaseModel]
-    output_model: Type[BaseModel]
+    input_model: Optional[Type[BaseModel]] = Field(default=None, description = "Optional input model for function, if cannot be derived from func definition.")
+    output_model: Optional[Type[BaseModel]] = Field(default=None, description = "Optional output model for function, if cannot be derived from func definition.")
 
     model_config = {
         "arbitrary_types_allowed": True
@@ -67,8 +67,8 @@ def make_uid(d: dict) -> str:
 
 def create_function_item(
   func: callable, 
-  input_model: Type[BaseModel], 
-  output_model: Type[BaseModel]) -> dict:
+  input_model: Type[BaseModel] = None, 
+  output_model: Type[BaseModel] = None) -> dict:
   """
   Constructs a structured function item that includes:
     - function name (extracted from the actual function's __name__)
@@ -91,6 +91,15 @@ def create_function_item(
 
   """
 
+  if input_model is None or output_model is None:
+    hints = get_type_hints(func)
+
+  if input_model is None:
+    input_model = hints.get("inputs")
+
+  if output_model is None:
+    output_model = hints.get("return")
+
   llm_func_item = {
     "name" : func.__name__,
     "description" : func.__doc__.strip() if func.__doc__ else "",
@@ -103,11 +112,20 @@ def create_function_item(
       **llm_func_item
   )
 
+def _fill_hints(fi):
+    hints = get_type_hints(fi.func)
+    fi.input_model = fi.input_model or hints.get("inputs")
+    fi.output_model = fi.output_model or hints.get("return")
+    return fi
+
 def create_avc_items(functions : List[LlmFunctionItemInput]):
 
   """
   Creates available functions and callables for Workflow Auto Assembler
   """
+
+  hints_for_functions = [get_type_hints(fi.func) for fi in functions]
+  functions_after_hints = [_fill_hints(fi) for fi in functions]
 
   llm_func_items = [{
     "name" : fi.func.__name__,
@@ -115,7 +133,7 @@ def create_avc_items(functions : List[LlmFunctionItemInput]):
     "input_schema_json" : fi.input_model.model_json_schema(),
     "output_schema_json" : fi.output_model.model_json_schema(),
     "code" : inspect.getsource(fi.func)
-  } for fi in functions]
+  } for fi in functions_after_hints]
 
   
   available_functions = [

@@ -181,8 +181,8 @@ import logging
 wr2 = WorkflowRunner(
     workflow_error = WorkflowError,
     workflow_error_types = WorkflowErrorType,
-    available_callables = available_functions, 
-    available_functions = available_callables2,
+    available_callables = available_callables2, 
+    available_functions = available_functions,
     loggerLvl = logging.DEBUG)
 
 test_outputs2 = wr2.run_workflow(
@@ -211,7 +211,7 @@ test_outputs2.error.model_dump()
 
 
 
-    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 641, in _run_func\n    output = func(inputs = inputs)\n  File "/tmp/ipykernel_16233/3259375930.py", line 11, in get_weather\n    error\nNameError: name \'error\' is not defined\n',
+    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 632, in _run_func\n    output = func(inputs = inputs)\n  File "/tmp/ipykernel_11761/3259375930.py", line 11, in get_weather\n    error\nNameError: name \'error\' is not defined\n',
      'error_type': <WorkflowErrorType.RUNNER: 'runner'>,
      'additional_info': {'ffunction': 'get_weather'}}
 
@@ -223,9 +223,9 @@ print(test_outputs2.error.error_message)
 ```
 
     Traceback (most recent call last):
-      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 641, in _run_func
+      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 632, in _run_func
         output = func(inputs = inputs)
-      File "/tmp/ipykernel_16233/3259375930.py", line 11, in get_weather
+      File "/tmp/ipykernel_11761/3259375930.py", line 11, in get_weather
         error
     NameError: name 'error' is not defined
     
@@ -261,8 +261,8 @@ adapted_workflow_obj_b3_workflow = [{'id': 1,
 wr3 = WorkflowRunner(
     workflow_error = WorkflowError,
     workflow_error_types = WorkflowErrorType,
-    available_callables = available_functions, 
-    available_functions = available_callables,
+    available_callables = available_callables, 
+    available_functions = available_functions,
     loggerLvl = logging.DEBUG)
 
 test_outputs3 = wr3.run_workflow(
@@ -290,7 +290,7 @@ test_outputs3.error.model_dump()
 
 
 
-    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 780, in run_workflow\n    func_item = [av for av in available_functions \\\nIndexError: list index out of range\n',
+    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 771, in run_workflow\n    func_item = [av for av in available_functions \\\nIndexError: list index out of range\n',
      'error_type': <WorkflowErrorType.PLANNING_HF: 'planning_hf'>,
      'additional_info': {}}
 
@@ -302,7 +302,7 @@ print(test_outputs3.error.error_message)
 ```
 
     Traceback (most recent call last):
-      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 780, in run_workflow
+      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 771, in run_workflow
         func_item = [av for av in available_functions \
     IndexError: list index out of range
     

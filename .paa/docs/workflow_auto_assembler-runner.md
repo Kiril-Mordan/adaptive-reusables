@@ -82,9 +82,12 @@ available_callables = available_tools["available_callables"]
 
 
 ```python
-from workflow_auto_assembler import WorkflowRunner, WorkflowError, WorkflowErrorType
+from workflow_auto_assembler import WorkflowRunner, WorkflowError, WorkflowErrorType, OutputComparer
+
+oc = OutputComparer()
 
 wr = WorkflowRunner(
+    output_comparer_h = oc,
     workflow_error = WorkflowError,
     workflow_error_types = WorkflowErrorType,
     available_callables = available_callables, 
@@ -145,6 +148,38 @@ test_outputs.outputs
 
 
 
+
+```python
+expected_output = WfOutputs(
+    city='Berlin', 
+    information=[
+        EmailInformationPoint(title='Birds Info', content='Content extracted from the database for your query is ...'), 
+        EmailInformationPoint(title='Weather', content='Sunny')])
+
+test_outputs2 = wr.run_workflow(
+    workflow = adapted_workflow, 
+    inputs = WfInputs(city = "Berlin"),
+    expected_outputs = expected_output,
+    output_model = WfOutputs)
+
+```
+
+
+```python
+test_outputs2.outputs
+```
+
+
+
+
+    {'0': WfInputs(city='Berlin'),
+     '1': QueryDatabaseOutput(info='Content extracted from the database for your query is ...', uid='0000'),
+     '2': GetWeatherOutput(condition='Sunny', temperature=20.0, humidity=0.6),
+     '3': SendReportEmailOutput(email_sent=True, message='Email sent to city of your choosing!'),
+     '4': WfOutputs(city='Berlin', information=[EmailInformationPoint(title='Birds Info', content='Content extracted from the database for your query is ...'), EmailInformationPoint(title='Weather', content='Sunny')])}
+
+
+
 #### 3. Triggering errors
 
 ##### Error in one of the workflow functions
@@ -179,6 +214,7 @@ from workflow_auto_assembler import WorkflowPlanner
 import logging
 
 wr2 = WorkflowRunner(
+    output_comparer_h = oc,
     workflow_error = WorkflowError,
     workflow_error_types = WorkflowErrorType,
     available_callables = available_callables2, 
@@ -211,7 +247,7 @@ test_outputs2.error.model_dump()
 
 
 
-    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 632, in _run_func\n    output = func(inputs = inputs)\n  File "/tmp/ipykernel_11761/3259375930.py", line 11, in get_weather\n    error\nNameError: name \'error\' is not defined\n',
+    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 874, in _run_func\n    output = func(inputs = inputs)\n  File "/tmp/ipykernel_8035/3259375930.py", line 11, in get_weather\n    error\nNameError: name \'error\' is not defined\n',
      'error_type': <WorkflowErrorType.RUNNER: 'runner'>,
      'additional_info': {'ffunction': 'get_weather'}}
 
@@ -223,9 +259,9 @@ print(test_outputs2.error.error_message)
 ```
 
     Traceback (most recent call last):
-      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 632, in _run_func
+      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 874, in _run_func
         output = func(inputs = inputs)
-      File "/tmp/ipykernel_11761/3259375930.py", line 11, in get_weather
+      File "/tmp/ipykernel_8035/3259375930.py", line 11, in get_weather
         error
     NameError: name 'error' is not defined
     
@@ -259,6 +295,7 @@ adapted_workflow_obj_b3_workflow = [{'id': 1,
 
 ```python
 wr3 = WorkflowRunner(
+    output_comparer_h = oc,
     workflow_error = WorkflowError,
     workflow_error_types = WorkflowErrorType,
     available_callables = available_callables, 
@@ -290,7 +327,7 @@ test_outputs3.error.model_dump()
 
 
 
-    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 771, in run_workflow\n    func_item = [av for av in available_functions \\\nIndexError: list index out of range\n',
+    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1014, in run_workflow\n    func_item = [av for av in available_functions \\\nIndexError: list index out of range\n',
      'error_type': <WorkflowErrorType.PLANNING_HF: 'planning_hf'>,
      'additional_info': {}}
 
@@ -302,8 +339,39 @@ print(test_outputs3.error.error_message)
 ```
 
     Traceback (most recent call last):
-      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 771, in run_workflow
+      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1014, in run_workflow
         func_item = [av for av in available_functions \
     IndexError: list index out of range
     
+
+
+##### Example output differs from expected one
+
+
+```python
+expected_output2 = WfOutputs(
+    city='London', 
+    information=[
+        EmailInformationPoint(title='Birds Info', content='Content extracted from the database for your query is ...'), 
+        EmailInformationPoint(title='Weather', content='Sunny')])
+
+test_outputs4 = wr.run_workflow(
+    workflow = adapted_workflow, 
+    inputs = WfInputs(city = "Berlin"),
+    expected_outputs = expected_output2,
+    output_model = WfOutputs)
+```
+
+
+```python
+test_outputs4.error.model_dump()
+```
+
+
+
+
+    {'error_message': 'Actual outputs do not match expected!',
+     'error_type': <WorkflowErrorType.OUTPUTS_UNEXPECTED: 'outputs_unexpected'>,
+     'additional_info': {'differences': ["city: 'London' != 'Berlin'"]}}
+
 

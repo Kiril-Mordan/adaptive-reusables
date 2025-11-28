@@ -17,6 +17,7 @@ from .components.workflow_check import WorkflowCheck, WorkflowCheckResponse
 from .components.workflow_planner import WorkflowPlanner, WorkflowPlannerResponse
 from .components.workflow_adaptor import WorkflowAdaptor, WorkflowAdaptorResponse
 from .components.input_collector import InputCollector
+from .components.output_comparer import OutputComparer
 from .components.workflow_runner import WorkflowRunner, TestedWorkflow
 
 __package_metadata__ = {
@@ -56,7 +57,8 @@ class AssembledWorkflow(BaseModel):
         "planner" : WorkflowPlanner,
         "adaptor" : WorkflowAdaptor,
         "runner" : WorkflowRunner,
-        "input_collector" : InputCollector
+        "input_collector" : InputCollector,
+        "output_comparer" : OutputComparer
     },
     logger_chaining={'loggerLvl' : True})
 class WorkflowAutoAssembler:
@@ -80,6 +82,7 @@ class WorkflowAutoAssembler:
         self._initialize_input_collector_h(uparams = {
             "loggerLvl" : logging.INFO
         })
+        self._initialize_output_comparer_h()
         self._initialize_llm_handler_h()
         self._initialize_planner_h(uparams = {
             "llm_h" : self.llm_handler_h,
@@ -97,6 +100,7 @@ class WorkflowAutoAssembler:
             "max_retry" : self.max_retry
         })
         self._initialize_runner_h(uparams = {
+            "output_comparer_h" : self.output_comparer_h,
             "available_functions" : self.available_functions,
             "available_callables" : self.available_callables,
             "workflow_error_types" : self.workflow_error_types,
@@ -134,7 +138,14 @@ class WorkflowAutoAssembler:
             wa_resp.planning.adaptor_rerun_needed = True
             wa_resp.planning.adaptor = None
 
-        if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS:
+        if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS_UNEXPECTED:
+            wa_resp.planning.planner.errors.append(wa_resp.planning.tester.error)
+
+            wa_resp.planning.planner_rerun_needed = True
+            wa_resp.planning.adaptor_rerun_needed = True
+            wa_resp.planning.adaptor = None
+
+        if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS_FAILURE:
             wa_resp.planning.adaptor.all_errors.append(wa_resp.planning.tester.error)
 
             wa_resp.planning.planner_rerun_needed = False

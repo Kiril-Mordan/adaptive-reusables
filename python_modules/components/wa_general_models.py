@@ -44,7 +44,8 @@ class WorkflowErrorType(Enum):
     ADAPTOR_JSON = "adaptor_json"
     RUNNER = "runner"
     INPUTS = "inputs"
-    OUTPUTS = "outputs"
+    OUTPUTS_FAILURE = "outputs_failure"
+    OUTPUTS_UNEXPECTED = "outputs_unexpected"
 
 class WorkflowError(BaseModel):
 

@@ -13,6 +13,25 @@ import traceback
 from enum import Enum
 
 
+@attrs.define(kw_only=True)
+class OutputComparerMock(ABC):
+
+    @abstractmethod
+    def compare_models(self, expected: BaseModel,
+    actual: BaseModel,
+    ignore_optional: bool = True,
+    max_decimals: int | None = None,
+    ignore_fields: Iterable[str] | None = None,
+    ignore_types: Iterable[type] | None = None,
+    *args,
+    **kwargs) -> list[str]:
+
+        """
+        Abstract method for comparing two outputs within pydantic models.
+        """
+
+        pass
+
 class FunctionCallOutput(BaseModel):
 
     output: Optional[BaseModel] = Field(default=None, description="Output of the function successful run.")
@@ -42,7 +61,7 @@ class TestedWorkflow(BaseModel):
         "arbitrary_types_allowed": True
     }
 
-@attrsx.define()
+@attrsx.define(handler_specs = {"output_comparer" : OutputComparerMock})
 class WorkflowRunner:
 
     workflow_error_types = attrs.field()
@@ -58,6 +77,10 @@ class WorkflowRunner:
         default=None,
         converter=lambda v: None if v is None else dict(v),
     )
+
+    def __attrs_post_init__(self):
+
+        self._initialize_output_comparer_h()
 
     def _run_func(self, 
         func_name : str,
@@ -152,6 +175,7 @@ class WorkflowRunner:
     def run_workflow(self, 
         workflow : List[dict], 
         inputs : Type[BaseModel] = None,
+        expected_outputs : Type[BaseModel] = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
         input_model : Type[BaseModel] = None,
@@ -250,7 +274,7 @@ class WorkflowRunner:
                     output = output_model(**func_args)
                 except Exception as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = self.workflow_error_types.OUTPUTS
+                    error_type = self.workflow_error_types.OUTPUTS_FAILURE
                     error = self.workflow_error(
                         error_message = error_message,
                         error_type = error_type,
@@ -262,6 +286,23 @@ class WorkflowRunner:
 
 
             outputs[str(workflow_item["id"])] = output
+
+        if expected_outputs is not None and error is None:
+
+            differences = self.output_comparer_h.compare_models(
+                expected = expected_outputs,
+                actual = output
+            )
+
+            if differences:
+                error_type = self.workflow_error_types.OUTPUTS_UNEXPECTED
+                error = self.workflow_error(
+                        error_message = "Actual outputs do not match expected!",
+                        error_type = error_type,
+                        additional_info = {
+                            "differences" : differences}
+                    )
+
 
 
         return TestedWorkflow(

@@ -120,6 +120,8 @@ class WorkflowAutoAssembler:
             wa_resp.planning.planner_rerun_needed = False
             wa_resp.planning.adaptor_rerun_needed = False
             wa_resp.workflow_completed = True
+            self.logger.debug(f"Workflow completed after {wa_resp.planning.test_retries + 1} planning loops!")
+
             return wa_resp
         
         self.logger.debug(f"Updating reset logic based on error: {wa_resp.planning.tester.error}")
@@ -139,11 +141,10 @@ class WorkflowAutoAssembler:
             wa_resp.planning.adaptor = None
 
         if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS_UNEXPECTED:
-            wa_resp.planning.planner.errors.append(wa_resp.planning.tester.error)
+            wa_resp.planning.adaptor.all_errors.append(wa_resp.planning.tester.error)
 
-            wa_resp.planning.planner_rerun_needed = True
+            wa_resp.planning.planner_rerun_needed = False
             wa_resp.planning.adaptor_rerun_needed = True
-            wa_resp.planning.adaptor = None
 
         if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS_FAILURE:
             wa_resp.planning.adaptor.all_errors.append(wa_resp.planning.tester.error)
@@ -168,7 +169,8 @@ class WorkflowAutoAssembler:
     async def plan_workflow(
         self,
         task_description : str, 
-        test_inputs : Type[BaseModel] = None, 
+        test_params : List[Dict[str, Type[BaseModel]]] = None, 
+        compare_params : dict = None,
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,
         available_functions : List[LlmFunctionItem] = None,
@@ -241,11 +243,21 @@ class WorkflowAutoAssembler:
                     adapted_workflow = wa_resp.planning.adaptor
                 )
 
-            if wa_resp.init_check.workflow_possible and test_inputs is not None:
+            if wa_resp.init_check.workflow_possible \
+                and test_params is not None \
+                    and wa_resp.planning.adaptor is not None:
+
+                expected_inputs = None
+                expected_outputs = None
+                if test_params:
+                    expected_inputs = test_params[0].get("inputs")
+                    expected_outputs = test_params[0].get("outputs")
 
                 wa_resp.planning.tester = self.runner_h.run_workflow(
                     workflow = wa_resp.planning.adaptor.workflow, 
-                    inputs = test_inputs,
+                    inputs = expected_inputs,
+                    expected_outputs = expected_outputs,
+                    compare_params = compare_params,
                     input_model = input_model,
                     output_model = output_model,
                     available_functions = available_functions,
@@ -262,11 +274,11 @@ class WorkflowAutoAssembler:
                 break
 
             wa_resp.planning.test_retries += 1
-            if wa_resp.planning.tester.error:
+            if wa_resp.planning.tester and wa_resp.planning.tester.error:
                 self.logger.warning(
-                    f"Error : {wa_resp.planning.tester.error.error_type} happened during testing. Attempts left {max_retry - wa_resp.planning.test_retries} !")
+                    f"Planning loop failed with {wa_resp.planning.tester.error.error_type} during testing. Attempts left {max_retry - wa_resp.planning.test_retries} !")
 
-        if wa_resp.init_check.workflow_possible:  
+        if wa_resp.init_check.workflow_possible and wa_resp.planning.adaptor:  
             wa_resp.workflow = wa_resp.planning.adaptor.workflow
 
         return wa_resp
@@ -350,7 +362,7 @@ class WorkflowAutoAssembler:
             wa_resp.planning.test_retries += 1
 
             self.logger.warning(
-                f"Error : {wa_resp.planning.tester.error.error_type} happened during testing. Attempts left {max_retry - wa_resp.planning.test_retries} !")
+                f"Planning loop failed with {wa_resp.planning.tester.error.error_type} during testing. Attempts left {max_retry - wa_resp.planning.test_retries} !")
 
             
         wa_resp.workflow = wa_resp.planning.adaptor.workflow

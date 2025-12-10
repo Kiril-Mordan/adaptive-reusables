@@ -105,4 +105,16 @@ debug_prompts:
 
     Do not comment!
   mo: >
+    
     Your output is missing output_model, pls include it as a final step!
+  unexpected: >
+    
+    Your planned workflow was assembled and ran using some example inputs. As a result of running your
+    workflow, the output deviated from the expected one. Here are the differences:
+
+    {differences}
+
+    Please adjust your workflow.
+    
+    Do not comment!
+  

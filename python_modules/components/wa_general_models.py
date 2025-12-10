@@ -41,6 +41,7 @@ class WorkflowErrorType(Enum):
     PLANNING_JSON = "planning_json"
     PLANNING_MISSOUTPUT = "planning_missoutput"
     PLANNING_HF = "planning_hf"
+    PLANNING_RESET = "planning_reset"
     ADAPTOR_JSON = "adaptor_json"
     RUNNER = "runner"
     INPUTS = "inputs"

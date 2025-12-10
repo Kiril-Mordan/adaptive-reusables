@@ -176,6 +176,7 @@ class WorkflowRunner:
         workflow : List[dict], 
         inputs : Type[BaseModel] = None,
         expected_outputs : Type[BaseModel] = None,
+        compare_params : dict = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
         input_model : Type[BaseModel] = None,
@@ -199,6 +200,9 @@ class WorkflowRunner:
 
         if output_model:
             available_callables["output_model"] = output_model
+
+        if compare_params is None:
+            compare_params = {}
 
         workflow = workflow.copy()
 
@@ -291,7 +295,9 @@ class WorkflowRunner:
 
             differences = self.output_comparer_h.compare_models(
                 expected = expected_outputs,
-                actual = output
+                actual = output,
+                workflow = workflow,
+                **compare_params
             )
 
             if differences:
@@ -300,6 +306,7 @@ class WorkflowRunner:
                         error_message = "Actual outputs do not match expected!",
                         error_type = error_type,
                         additional_info = {
+                            "step_id" : len(workflow),
                             "differences" : differences}
                     )
 

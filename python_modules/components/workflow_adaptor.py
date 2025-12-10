@@ -52,6 +52,7 @@ class WorkflowAdaptorStep(BaseModel):
     func_name : str = Field(description = "Function name used in the step.")
     retries : int = Field(description = "Number of attempt it took to generate workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for adapting workflow.")
+    additional_messages : List[dict] = Field(default = None, description = "Additional messages for planning workflow.")
     errors : List[BaseModel] = Field(description = "Errors during planning.")
     adapted_schema : Optional[dict] = Field(default = None, description = "Planned workflow.")
     state_schema: Optional[dict] = Field(default = None, description = "Schema of steps before this one in the workflow.")
@@ -83,7 +84,7 @@ class WorkflowAdaptor:
 
     system_message : str = attrs.field(default=None)
     system_message_items : Dict[str, str] = attrs.field(default=None)
-    debug_prompt : str = attrs.field(default=None)
+    debug_prompts : Dict[str,str] = attrs.field(default=None)
     adapt_prompt : str = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
@@ -104,7 +105,7 @@ class WorkflowAdaptor:
         prompts_filepath : str = None,
         system_message : str = None, 
         system_message_items : Dict[str,str] = None,
-        debug_prompt : str = None,
+        debug_prompts : Dict[str,str] = None,
         adapt_prompt : str = None
         ):
 
@@ -135,10 +136,10 @@ class WorkflowAdaptor:
         else:
             self.system_message_items = wa_prompts.get("system_message_items", {})
 
-        if debug_prompt: 
-            self.debug_prompt = debug_prompt
+        if debug_prompts: 
+            self.debug_prompts = debug_prompts
         else:
-            self.debug_prompt = wa_prompts['debug_prompt']
+            self.debug_prompts = wa_prompts['debug_prompts']
 
         if adapt_prompt: 
             self.adapt_prompt = adapt_prompt
@@ -489,17 +490,18 @@ class WorkflowAdaptor:
 
                 response = await self.llm_h.chat(init_messages)
                 llm_response = response.message.content
+                additional_messages = [{'role' : 'assistant', "content" : llm_response}]
             else:
                 step_id = adapted_step.step_id
                 init_messages = adapted_step.init_messages
-                llm_response = json.dumps(adapted_step.workflow)
+                additional_messages = adapted_step.additional_messages
+                llm_response = json.dumps(additional_messages[-1].get("content", {}))
                 retry_i = adapted_step.retries
                 errors = adapted_step.errors
                 init_error = errors[-1]
                 target_schema = adapted_step.target_schema
                 func_name = adapted_step.func_name
 
-            retry_messages = init_messages
 
             while retry_i < max_retry:
 
@@ -509,7 +511,8 @@ class WorkflowAdaptor:
                     target_schema = target_schema,
                     state=workflow_current_state_schema,
                     id_func_mapping=id_func_mapping,
-                    current_function=func_name)
+                    current_function=func_name,
+                    init_error=init_error)
 
                 if error is None:
                     adapted_schema = self._read_json_output(output=llm_response)
@@ -521,7 +524,8 @@ class WorkflowAdaptor:
                         state_schema = workflow_current_state_schema,
                         target_schema = target_schema,
                         retries = retry_i,
-                        init_messages = init_messages
+                        init_messages = init_messages,
+                        additional_messages = additional_messages
                     )
 
                 retry_i += 1
@@ -530,20 +534,44 @@ class WorkflowAdaptor:
                 else:
                     errors.append(error)
 
+                self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
                 self.logger.debug(f"Attempt for {func_name}: {retry_i}")
 
-                if error.error_type is self.workflow_error_types.ADAPTOR_JSON:
+                if error.error_type in [self.workflow_error_types.OUTPUTS_FAILURE, self.workflow_error_types.ADAPTOR_JSON]:
 
                     mapping_errors = "\n ".join(iter(error.additional_info["error_messages"]))
-                    retry_messages += [
+
+                    additional_messages += [
                         {"role": "assistant", "content": llm_response},
-                        {"role": "user", "content": self.debug_prompt.format(
+                        {"role": "user", "content": self.debug_prompts["mapping"].format(
                     mapping_errors = mapping_errors)}
                     ]
+                    retry_messages = init_messages + additional_messages 
 
                     debug_response = await self.llm_h.chat(retry_messages)
                     llm_response = debug_response.message.content
+                    additional_messages += [{'role' : 'assistant', "content" : llm_response}]
                     continue
+
+                if error.error_type is self.workflow_error_types.OUTPUTS_UNEXPECTED:
+
+                    differences = error.additional_info.get("differences", [])
+
+                    if differences:
+
+                        difference_errors = json.dumps(differences)
+
+                        additional_messages += [
+                            {"role": "assistant", "content": llm_response},
+                            {"role": "user", "content": self.debug_prompts["unexpected"].format(
+                        differences = difference_errors)}
+                        ]
+                        retry_messages = init_messages + additional_messages 
+
+                        debug_response = await self.llm_h.chat(retry_messages)
+                        llm_response = debug_response.message.content
+                        additional_messages += [{'role' : 'assistant', "content" : llm_response}]
+                        continue
             
         else:
             return WorkflowAdaptorStep(
@@ -567,7 +595,8 @@ class WorkflowAdaptor:
                 state_schema = None,
                 retries = retry_i,
                 target_schema = target_schema,
-                init_messages = init_messages
+                init_messages = init_messages,
+                additional_messages = additional_messages
             )
 
     def _hash_string_sha256(self, input_string: str) -> str:
@@ -673,6 +702,121 @@ class WorkflowAdaptor:
 
         return create_model(schema["title"], **fields)
 
+    async def _adapt_steps(self, 
+        workflow : List[dict],
+        available_functions : List[LlmFunctionItem],
+        input_model : Type[BaseModel],
+        output_model : Type[BaseModel],
+        max_retry : Optional[int]):
+
+        include_input = False
+        include_output = False
+        if input_model:
+            include_input = True
+        if output_model:
+            include_output = True
+
+        id_workflow, id_func_mapping = self._add_fcall_ids(
+                workflow=workflow,
+                input_model=input_model,
+                output_model=output_model)
+
+        workflow_s, available_functions_t = self._mod_inputs_for_output_model(
+            workflow=workflow,
+            available_functions=available_functions,
+            output_model=output_model
+        )
+            
+        workflow_current_state_schema = {step['name'] : self._make_current_state_schema(
+            workflow = id_workflow, 
+            available_functions = available_functions, 
+            input_model = input_model,
+            output_model=output_model,
+            func_name = step['name']
+        ) for step in workflow_s}
+
+        # Create a list of tasks for each workflow step using adapt_func.
+        adapt_tasks = [asyncio.create_task(self._adapt_func(
+            step_id = step["id"],
+            func_name = step['name'],
+            workflow = id_workflow,
+            workflow_current_state_schema = workflow_current_state_schema[step['name']],
+            available_functions = available_functions_t,
+            id_func_mapping = id_func_mapping,
+            max_retry = max_retry)) \
+            for step in id_workflow if step["name"] != "input_model"]
+        
+        # Wait for all tasks to complete and gather their results.
+        adapted_steps = await asyncio.gather(*adapt_tasks)
+
+
+        adapted_workflow = [{
+            "id" : adapted_step.step_id, 
+            "func_id" : [av.func_id for av in available_functions_t if av.name == adapted_step.func_name][0],
+            'name' : adapted_step.func_name, 
+            'args': adapted_step.adapted_schema} \
+        for adapted_step in adapted_steps]
+
+        adapted_fixed_workflow = self.input_collector_h.fix_literal_values(workflow, adapted_workflow)
+
+        return WorkflowAdaptorResponse(
+            total_retries = sum([adapted_step.retries for adapted_step in adapted_steps]),
+            planned_workflow = id_workflow,
+            workflow = adapted_fixed_workflow,
+            all_errors = [err for adapted_step in adapted_steps for err in adapted_step.errors],
+            steps = adapted_steps,
+            include_input = include_input,
+            include_output = include_output
+        )
+
+    async def _reset_step_based_on_error(self, 
+        error,
+        adapted_workflow : Optional[WorkflowAdaptorResponse],
+        max_retry : Optional[int]
+        ):
+
+
+        self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
+
+        retried_step_id = adapted_workflow.all_errors[-1].additional_info["step_id"]
+        retried_step = [step for step in adapted_workflow.workflow if step["id"] == retried_step_id][0]
+        retried_step_obj = [step_obj for step_obj in adapted_workflow.steps if step_obj.step_id == retried_step_id][0]
+
+        id_func_mapping = {}
+
+        if adapted_workflow.include_input:
+            id_func_mapping["0"] = "input_model"
+        
+        id_func_mapping_u = {str(step_obj.step_id) : step_obj.func_name for step_obj in adapted_workflow.steps}
+        id_func_mapping.update(id_func_mapping_u)
+
+        retried_step_obj.errors.append(error)
+
+        reset_step = await self._adapt_func(
+            id_func_mapping = id_func_mapping,
+            workflow_current_state_schema = retried_step_obj.state_schema,
+            adapted_step = retried_step_obj,
+            max_retry = max_retry)
+
+        adapted_workflow.total_retries += reset_step.retries
+        adapted_workflow.all_errors += reset_step.errors
+
+        reset_step.errors = retried_step_obj.errors + reset_step.errors
+        reset_step.retries += retried_step_obj.retries
+        
+        adapted_workflow.steps = [reset_step \
+            if step.step_id == retried_step_id else step \
+            for step in adapted_workflow.steps]
+
+        adapted_workflow.workflow = [{
+            'id': wstep['id'], 
+            'func_id' : wstep['func_id'],
+            'name' : wstep['name'], 
+            'args' : reset_step.adapted_schema} if wstep['id'] == retried_step_id else wstep \
+            for wstep in adapted_workflow.workflow]
+
+        return adapted_workflow
+    
     async def adapt_workflow(
         self,
         workflow : List[dict] = None,
@@ -695,108 +839,33 @@ class WorkflowAdaptor:
         if available_functions is None:
             raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
 
-        include_input = False
-        include_output = False
-        if input_model:
-            include_input = True
-        if output_model:
-            include_output = True
+        if adapted_workflow is None and workflow is None:
+            self.logger.warning("No workflow was provided to adapt!")
+            return None
 
-        if adapted_workflow is None:
+        if adapted_workflow is None and workflow:
 
             workflow = workflow.copy()
 
-            id_workflow, id_func_mapping = self._add_fcall_ids(
+            adapted_workflow = await self._adapt_steps(
                 workflow=workflow,
                 input_model=input_model,
-                output_model=output_model)
-
-            workflow_s, available_functions_t = self._mod_inputs_for_output_model(
-                workflow=workflow,
-                available_functions=available_functions,
-                output_model=output_model
-            )
-                
-            workflow_current_state_schema = {step['name'] : self._make_current_state_schema(
-                workflow = id_workflow, 
-                available_functions = available_functions, 
-                input_model = input_model,
                 output_model=output_model,
-                func_name = step['name']
-            ) for step in workflow_s}
-
-            # Create a list of tasks for each workflow step using adapt_func.
-            adapt_tasks = [asyncio.create_task(self._adapt_func(
-                step_id = step["id"],
-                func_name = step['name'],
-                workflow = id_workflow,
-                workflow_current_state_schema = workflow_current_state_schema[step['name']],
-                available_functions = available_functions_t,
-                id_func_mapping = id_func_mapping,
-                max_retry = max_retry)) \
-                for step in id_workflow if step["name"] != "input_model"]
-            
-            # Wait for all tasks to complete and gather their results.
-            adapted_steps = await asyncio.gather(*adapt_tasks)
-
-
-            adapted_workflow = [{
-                "id" : adapted_step.step_id, 
-                "func_id" : [av.func_id for av in available_functions_t if av.name == adapted_step.func_name][0],
-                'name' : adapted_step.func_name, 
-                'args': adapted_step.adapted_schema} \
-            for adapted_step in adapted_steps]
-
-            adapted_fixed_workflow = self.input_collector_h.fix_literal_values(workflow, adapted_workflow)
-
-            return WorkflowAdaptorResponse(
-                total_retries = sum([adapted_step.retries for adapted_step in adapted_steps]),
-                planned_workflow = id_workflow,
-                workflow = adapted_fixed_workflow,
-                all_errors = [err for adapted_step in adapted_steps for err in adapted_step.errors],
-                steps = adapted_steps,
-                include_input = include_input,
-                include_output = include_output
+                available_functions=available_functions,
+                max_retry=max_retry
             )
+
+            return adapted_workflow
 
         else:
-            retried_step_id = adapted_workflow.all_errors[-1].additional_info["step_id"]
-            retried_step = [step for step in adapted_workflow.workflow if step["id"] == retried_step_id][0]
-            retried_step_obj = [step_obj for step_obj in adapted_workflow.steps if step_obj.step_id == retried_step_id][0]
 
-            id_func_mapping = {}
+            if adapted_workflow.all_errors:
 
-            if adapted_workflow.include_input:
-                id_func_mapping["0"] = "input_model"
-            
-            id_func_mapping_u = {str(step_obj.step_id) : step_obj.func_name for step_obj in adapted_workflow.steps}
-            id_func_mapping.update(id_func_mapping_u)
-
-            reset_step = await self._adapt_func(
-                step_id = retried_step_id,
-                func_name = retried_step['name'],
-                workflow = adapted_workflow.planned_workflow,
-                workflow_current_state_schema = retried_step_obj.state_schema,
-                available_functions = available_functions,
-                id_func_mapping = id_func_mapping,
-                max_retry = max_retry)
-
-            adapted_workflow.total_retries += reset_step.retries
-            adapted_workflow.all_errors += reset_step.errors
-
-            reset_step.errors = retried_step_obj.errors + reset_step.errors
-            reset_step.retries += retried_step_obj.retries
-            
-            adapted_workflow.steps = [reset_step \
-                if step.step_id == retried_step_id else step \
-                for step in adapted_workflow.steps]
-
-            adapted_workflow.workflow = [{
-                'id': wstep['id'], 
-                'func_id' : wstep['func_id'],
-                'name' : wstep['name'], 
-                'args' : reset_step.adapted_schema} if wstep['id'] == retried_step_id else wstep \
-                for wstep in adapted_workflow.workflow]
+                adapted_workflow = await self._reset_step_based_on_error(
+                    error = adapted_workflow.all_errors[-1],
+                    adapted_workflow = adapted_workflow,
+                    max_retry = max_retry
+                )
 
             return adapted_workflow
             

@@ -61,14 +61,27 @@ adapt_prompt: >
   {selected_function_input_schema}
 
 
-debug_prompt: >
-  Your output does not seem to be formated propperly, 
-  and some of the fields expect different kinds of inputs. Pls try again, this time making sure inputs are compatible with expected input schema. 
+debug_prompts:
+  mapping: >
 
-  Problems with generated mapping:
-  {mapping_errors}
+    Your output does not seem to be formated propperly, 
+    and some of the fields expect different kinds of inputs. Pls try again, this time making sure inputs are compatible with expected input schema. 
+
+    Problems with generated mapping:
+    {mapping_errors}
 
 
-  Do not comment!
+    Do not comment!
+
+  unexpected: >
+
+    Your planned workflow was assembled and ran using some example inputs. As a result of running your
+    workflow, the output deviated from the expected one. Here are the differences:
+
+    {differences}
+
+    Please adjust your workflow.
+    
+    Do not comment!
 
 

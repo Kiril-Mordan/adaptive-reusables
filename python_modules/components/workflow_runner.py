@@ -306,6 +306,7 @@ class WorkflowRunner:
                         error_message = "Actual outputs do not match expected!",
                         error_type = error_type,
                         additional_info = {
+                            "step_id" : len(workflow),
                             "differences" : differences}
                     )
 

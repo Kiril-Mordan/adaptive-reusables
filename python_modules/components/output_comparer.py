@@ -98,7 +98,10 @@ class OutputComparer:
             self._compare_models(expected, actual, "", diffs)
 
             if workflow:
-                diffs = [{**d, "source" : self.classify_diff_item(path = d["path"], workflow = workflow)} for d in diffs]
+                diffs = [{**d, 
+                "output" : workflow[len(workflow)-1]['args'][self._get_source_key(d["path"])],
+                "source_step_id" : self._get_step_id_for_path(path = self._get_source_key(d["path"]), workflow = workflow), 
+                "source" : self.classify_diff_item(path = d["path"], workflow = workflow)} for d in diffs]
             return diffs
         finally:
             # Restore instance state
@@ -109,6 +112,7 @@ class OutputComparer:
 
     # ---------- helpers for classifying diff ----------
 
+    
     def classify_diff_item(self, workflow, path):
 
         output_source, output_source_loc = self._get_source_from_path(workflow=workflow, path=path)
@@ -118,6 +122,22 @@ class OutputComparer:
         label = self._process_cs(output_source = output_source_c, app = output_source_loc)
 
         return label
+
+    def _get_step_id_for_path(self,workflow, path):
+
+        output = workflow[len(workflow)-1]['args'][path]
+
+        step_id = -1
+
+        if isinstance(output, list) or isinstance(output, dict):
+            return step_id
+
+        splits = output.split(".")
+        if len(splits) > 1:
+            step_id = int(splits[0])
+
+            return step_id
+
 
     def _classify_source_item(self, output_source : str):
 
@@ -174,15 +194,22 @@ class OutputComparer:
 
     def _get_source_from_path(self, workflow, path):
 
+        field = self._get_source_key(path = path)
+
+        app = self._get_dir_source_from_path(workflow = workflow, path = path)
+
+        return workflow[-1]['args'][field] , app
+
+    def _get_source_key(self, path):
+
         fields = path.split("[")
 
         if len(fields) == 1:
             fields = path.split(".")
 
         field = fields[0]
-        app = self._get_dir_source_from_path(workflow = workflow, path = path)
 
-        return workflow[-1]['args'][field] , app
+        return field
 
     # ---------- helpers for diff collection ----------
 
@@ -257,7 +284,7 @@ class OutputComparer:
             }
         )
 
-    def _compare_scalar(self, left, right, path: str, diffs: list[Dict[str, Any]]):
+    def _compare_scalar(self, left, right, path: str , diffs: list[Dict[str, Any]]):
         # Handle numeric rounding if configured
         if isinstance(left, (int, float)) and isinstance(right, (int, float)):
             if self.max_decimals is not None:

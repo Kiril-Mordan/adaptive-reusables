@@ -24,6 +24,7 @@ class WorkflowPlannerResponse(BaseModel):
     retries : int = Field(description = "Number of attempt it took to generate workflow.")
     workflow : Optional[List[dict]] = Field(default = None, description = "Planned workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for planning workflow.")
+    additional_messages : List[dict] = Field(default = None, description = "Additional messages for planning workflow.")
     errors : List[BaseModel] = Field(description = "Errors during planning.")
     include_input : bool = Field(description = "If input model is expected.")
     include_output : bool = Field(description = "If output model is expected.")
@@ -149,7 +150,11 @@ class WorkflowPlanner:
 
             afunctions = [afd.name for afd in available_functions]
 
-            hfunctions = [fc['name'] for fc in function_calls if fc['name'] not in afunctions]
+            hfunctions = [fc.get('name')  for fc in function_calls if fc.get('name', "") not in afunctions]
+
+            if [i for i in hfunctions if i is None]:
+                self.logger.error(f"Function call is missing function name: {function_calls}")
+            hfunctions = [i for i in hfunctions if i is not None]
 
             if include_output:
                 hfunctions = [hf for hf in hfunctions if hf != "output_model"]
@@ -282,6 +287,7 @@ class WorkflowPlanner:
 
             response = await self.llm_h.chat(init_messages)
             llm_response = response.message.content
+            additional_messages = [{'role' : 'assistant', "content" : llm_response}]
 
             retry_i = 0
             errors = []
@@ -291,6 +297,7 @@ class WorkflowPlanner:
         
         else:
             init_messages = planned_workflow.init_messages
+            additional_messages = planned_workflow.additional_messages
             llm_response = json.dumps(planned_workflow.workflow)
             retry_i = planned_workflow.retries
             errors = planned_workflow.errors
@@ -300,8 +307,6 @@ class WorkflowPlanner:
             init_error = errors[-1]
             include_input = planned_workflow.include_input
             include_output = planned_workflow.include_output
-        
-        retry_messages = init_messages
 
         while retry_i < max_retry:
 
@@ -319,7 +324,8 @@ class WorkflowPlanner:
                     retries = retry_i,
                     include_input = include_input,
                     include_output = include_output,
-                    init_messages = init_messages
+                    init_messages = init_messages,
+                    additional_messages = additional_messages
                 )
 
             retry_i += 1
@@ -328,22 +334,27 @@ class WorkflowPlanner:
             else:
                 errors.append(error)
 
+            self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
             self.logger.debug(f"Attempt: {retry_i}")
 
             if error.error_type is self.workflow_error_types.PLANNING_JSON:
+
+                retry_messages = init_messages
                 debug_response = await self.llm_h.chat(retry_messages)
                 llm_response = debug_response.message.content
+                additional_messages[-1] = [{'role' : 'assistant', "content" : llm_response}]
                 continue
 
             if error.error_type is self.workflow_error_types.PLANNING_MISSOUTPUT:
-
-                retry_messages = init_messages + [
-                    {'role' : 'assistant', "content" : llm_response},
+                
+                additional_messages += [
                     {"role": "user", "content": self.debug_prompts["mo"]}
                 ]
+                retry_messages = init_messages + additional_messages 
 
                 debug_response = await self.llm_h.chat(retry_messages)
                 llm_response = debug_response.message.content
+                additional_messages += [{'role' : 'assistant', "content" : llm_response}]
                 continue
 
             if error.error_type is self.workflow_error_types.PLANNING_HF:
@@ -355,15 +366,17 @@ class WorkflowPlanner:
                         available_functions = available_functions,
                         include_output = include_output)
 
-                retry_messages = init_messages + [
-                    {'role' : 'assistant', "content" : llm_response},
+                additional_messages += [
                     {"role": "user", "content": self.debug_prompts["hf"].format(
                         hfunctions = "\n -".join([h for h in hfunctions]),
                         afunctions = "\n -".join([a for a in afunctions]))}
                 ]
 
+                retry_messages = init_messages + additional_messages
+
                 debug_response = await self.llm_h.chat(retry_messages)
                 llm_response = debug_response.message.content
+                additional_messages += [{'role' : 'assistant', "content" : llm_response}]
                 continue
 
             if error.error_type is self.workflow_error_types.RUNNER:
@@ -377,15 +390,33 @@ class WorkflowPlanner:
 
                 ffunction = error.additional_info.get("ffunction")
 
-                retry_messages = init_messages + [
-                    {'role' : 'assistant', "content" : llm_response},
+                additional_messages += [
                     {"role": "user", "content": self.debug_prompts["alt"].format(
                         ffunction = ffunction,
                         afunctions = "\n -".join([a for a in afunctions if a != ffunction]))}
                 ]
 
+                retry_messages = init_messages + additional_messages
+
                 debug_response = await self.llm_h.chat(retry_messages)
                 llm_response = debug_response.message.content
+                additional_messages += [{'role' : 'assistant', "content" : llm_response}]
+                continue
+
+            if error.error_type is self.workflow_error_types.OUTPUTS_UNEXPECTED:
+
+                differences = error.additional_info.get("differences")
+
+                additional_messages += [
+                    {"role": "user", "content": self.debug_prompts["unexpected"].format(
+                        differences = "\n -".join(differences))}
+                ]
+
+                retry_messages = init_messages + additional_messages
+
+                debug_response = await self.llm_h.chat(retry_messages)
+                llm_response = debug_response.message.content
+                additional_messages += [{'role' : 'assistant', "content" : llm_response}]
                 continue
 
         if retry_i == max_retry:
@@ -394,6 +425,7 @@ class WorkflowPlanner:
                 workflow = None,
                 retries = retry_i,
                 init_messages = init_messages,
+                additional_messages = additional_messages,
                 include_input = include_input,
                 include_output = include_output,
             )

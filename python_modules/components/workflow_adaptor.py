@@ -586,18 +586,18 @@ class WorkflowAdaptor:
             )
 
 
-        if retry_i == max_retry:
-            return WorkflowAdaptorStep(
-                step_id = step_id,
-                func_name = func_name,
-                errors = errors,
-                adapted_schema = None,
-                state_schema = None,
-                retries = retry_i,
-                target_schema = target_schema,
-                init_messages = init_messages,
-                additional_messages = additional_messages
-            )
+        
+        return WorkflowAdaptorStep(
+            step_id = step_id,
+            func_name = func_name,
+            errors = errors,
+            adapted_schema = None,
+            state_schema = None,
+            retries = retry_i,
+            target_schema = target_schema,
+            init_messages = init_messages,
+            additional_messages = additional_messages
+        )
 
     def _hash_string_sha256(self, input_string: str) -> str:
         return hashlib.sha256(input_string.encode()).hexdigest()

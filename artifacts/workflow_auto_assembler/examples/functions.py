@@ -57,7 +57,7 @@ class ConvertUnitsOutput(BaseModel):
 
 def convert_units(inputs: ConvertUnitsInput) -> ConvertUnitsOutput:
     """Convert measurement units."""
-    return ConvertUnitsOutput(converted_value=inputs.value * 1.3)
+    return ConvertUnitsOutput(converted_value=round(inputs.value * 1.3,6))
 
 
 class CalculateDistanceInput(BaseModel):
@@ -95,7 +95,7 @@ class CurrencyExchangeOutput(BaseModel):
 
 def currency_exchange(inputs: CurrencyExchangeInput) -> CurrencyExchangeOutput:
     """Convert currencies."""
-    return CurrencyExchangeOutput(converted_amount=inputs.amount * 1.1)
+    return CurrencyExchangeOutput(converted_amount=round(inputs.amount * 1.1,6))
 
 class StoreFileInput(BaseModel):
     filename: str

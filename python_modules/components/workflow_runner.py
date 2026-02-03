@@ -174,6 +174,7 @@ class WorkflowRunner:
 
     def run_workflow(self, 
         workflow : List[dict], 
+        test_params : List[Dict[str, Type[BaseModel]]] = None,
         inputs : Type[BaseModel] = None,
         expected_outputs : Type[BaseModel] = None,
         compare_params : dict = None,
@@ -208,6 +209,8 @@ class WorkflowRunner:
 
         outputs = {}
 
+        
+
         if inputs : 
             outputs["0"] = inputs
 
@@ -221,12 +224,19 @@ class WorkflowRunner:
                     outputs = outputs,
                     func_args = workflow_item["args"])
 
+                if func_args is None:
+                    func_args = {}
+
             except Exception as e:
                 error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                 error_type = self.workflow_error_types.INPUTS
                 error = self.workflow_error(
                     error_message = error_message,
-                    error_type = error_type
+                    error_type = error_type,
+                    additional_info = {
+                            "step_id" : workflow_item["id"],
+                            "error_messages" : [error_message]}
+                    
                 )
                 break
 

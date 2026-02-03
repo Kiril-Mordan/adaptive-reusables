@@ -16,7 +16,7 @@ from .components.llm_function.llm_handler import LlmHandler
 from .components.workflow_check import WorkflowCheck, WorkflowCheckResponse
 from .components.workflow_planner import WorkflowPlanner, WorkflowPlannerResponse
 from .components.workflow_adaptor import WorkflowAdaptor, WorkflowAdaptorResponse
-from .components.input_collector import InputCollector
+from .components.input_collector import InpuCollector
 from .components.output_comparer import OutputComparer
 from .components.workflow_runner import WorkflowRunner, TestedWorkflow
 
@@ -28,7 +28,9 @@ __package_metadata__ = {
 
 class PlanningStepsResp(BaseModel):
     planner : Optional[WorkflowPlannerResponse] = Field(default = None, description = "Planning steps of workflow creation.")
-    adaptor : Optional[WorkflowAdaptorResponse] = Field(default = None, description = "Adapting step of workflow creation.")
+    planner_iters : Optional[List[WorkflowPlannerResponse]] = Field(default = [], description = "Snapshot of planning steps of workflow creation at each reset.")
+    adaptor : Optional[WorkflowAdaptorResponse] = Field(default = None, description = "Adapting steps of workflow creation.")
+    adaptor_iters : Optional[List[WorkflowAdaptorResponse]] = Field(default = [], description = "Snapshot of adapting steps of workflow creation at each reset.")
     tester : Optional[TestedWorkflow] = Field(default = None, description = "Testing step of workflow creation.") 
     planner_rerun_needed : Optional[bool] = Field(default = True, description = "Indicates if planner needs reset during retry.")
     adaptor_rerun_needed : Optional[bool] = Field(default = True, description = "Indicates if adaptor needs reset during retry.")
@@ -52,6 +54,7 @@ class AssembledWorkflow(BaseModel):
 
 
 @attrsx.define(handler_specs = {
+        #"shouter" : Shouter,
         "llm_handler" : LlmHandler,
         "check" : WorkflowCheck,
         "planner" : WorkflowPlanner,
@@ -60,7 +63,10 @@ class AssembledWorkflow(BaseModel):
         "input_collector" : InputCollector,
         "output_comparer" : OutputComparer
     },
-    logger_chaining={'loggerLvl' : True})
+    logger_chaining={
+        #'loggerLvl' : True
+        'logger' : True
+        })
 class WorkflowAutoAssembler:
 
     workflow_error_types = attrs.field(default=WorkflowErrorType)
@@ -75,13 +81,13 @@ class WorkflowAutoAssembler:
         converter=lambda v: None if v is None else dict(v),
     )
 
+    max_output_unexpected : int = attrs.field(default=3)
     max_retry : int = attrs.field(default=5)
 
     def __attrs_post_init__(self):
 
-        self._initialize_input_collector_h(uparams = {
-            "loggerLvl" : logging.INFO
-        })
+        self._initialize_input_collector_h()
+        
         self._initialize_output_comparer_h()
         self._initialize_llm_handler_h()
         self._initialize_planner_h(uparams = {
@@ -123,8 +129,13 @@ class WorkflowAutoAssembler:
             self.logger.debug(f"Workflow completed after {wa_resp.planning.test_retries + 1} planning loops!")
 
             return wa_resp
-        
-        self.logger.debug(f"Updating reset logic based on error: {wa_resp.planning.tester.error}")
+
+        self.logger.debug(f"Updating reset logic based on error: {wa_resp.planning.tester.error}",
+                          label = wa_resp.planning.tester.error.error_type.name,
+                          save_vars = ["wa_resp.planning.tester.error"])
+
+        wa_resp.planning.planner_iters.append(wa_resp.planning.planner)
+        wa_resp.planning.adaptor_iters.append(wa_resp.planning.adaptor)
 
         if wa_resp.planning.tester.error.error_type is WorkflowErrorType.RUNNER:
             wa_resp.planning.planner.errors.append(wa_resp.planning.tester.error)
@@ -141,10 +152,28 @@ class WorkflowAutoAssembler:
             wa_resp.planning.adaptor = None
 
         if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS_UNEXPECTED:
-            wa_resp.planning.adaptor.all_errors.append(wa_resp.planning.tester.error)
 
-            wa_resp.planning.planner_rerun_needed = False
-            wa_resp.planning.adaptor_rerun_needed = True
+            n_output_unexpected = len([err for err in wa_resp.planning.testing_errors if err is WorkflowErrorType.OUTPUTS_UNEXPECTED])
+            n_planning_reset = len([err for err in wa_resp.planning.testing_errors if err is WorkflowErrorType.PLANNING_RESET])
+
+            n_prev_output_unexpected = 0
+            if n_planning_reset > 0:
+                n_prev_output_unexpected = n_output_unexpected%n_planning_reset
+
+
+            if n_prev_output_unexpected < self.max_output_unexpected:
+
+                wa_resp.planning.adaptor.all_errors.append(wa_resp.planning.tester.error)
+
+                wa_resp.planning.planner_rerun_needed = False
+                wa_resp.planning.adaptor_rerun_needed = True
+            else:
+                wa_resp.planning.tester.error.error_type = WorkflowErrorType.PLANNING_RESET
+                wa_resp.planning.planner.errors.append(wa_resp.planning.tester.error)
+
+                wa_resp.planning.planner_rerun_needed = True
+                wa_resp.planning.adaptor_rerun_needed = True
+                wa_resp.planning.adaptor = None
 
         if wa_resp.planning.tester.error.error_type is WorkflowErrorType.OUTPUTS_FAILURE:
             wa_resp.planning.adaptor.all_errors.append(wa_resp.planning.tester.error)
@@ -158,9 +187,7 @@ class WorkflowAutoAssembler:
             wa_resp.planning.planner_rerun_needed = False
             wa_resp.planning.adaptor_rerun_needed = True
 
-
         wa_resp.planning.testing_errors.append(wa_resp.planning.tester.error)
-
         wa_resp.planning.tester.error = None
 
         return wa_resp
@@ -185,7 +212,7 @@ class WorkflowAutoAssembler:
             max_retry = self.max_retry
 
         wa_resp = AssembledWorkflow(
-            id = str(uuid.uuid4()),
+            id = uuid.uuid4().hex,
             input_id = make_uid(d = {
                 "task_description" : task_description,
                 "input_model" : input_model.model_json_schema() if input_model else "",
@@ -197,6 +224,8 @@ class WorkflowAutoAssembler:
                 output_model_json = output_model.model_json_schema()
             )
         )
+
+        self.logger.debug(f"Starting workflow planning ...", label = "START")
 
         while wa_resp.planning.test_retries in range(max_retry):
 
@@ -216,6 +245,7 @@ class WorkflowAutoAssembler:
                     continue
 
                 if wa_resp.workflow_possible is False:
+                    self.logger.warning(f"Workflow planning is not possible!")
                     wa_resp.planning.planner_rerun_needed = False
                     wa_resp.planning.adaptor_rerun_needed = False
                     wa_resp.workflow_completed = False
@@ -281,6 +311,11 @@ class WorkflowAutoAssembler:
         if wa_resp.init_check.workflow_possible and wa_resp.planning.adaptor:  
             wa_resp.workflow = wa_resp.planning.adaptor.workflow
 
+        if wa_resp.workflow_completed:
+            self.logger.debug("Workflow completed.", label = "COMPLETED")
+        else:
+            self.logger.warning("Workflow failed to converge.", label = "FAILED")
+
         return wa_resp
 
     async def run_workflow(
@@ -311,7 +346,6 @@ class WorkflowAutoAssembler:
             output_model = self.runner_h.json_schema_to_base_model(
                 workflow_object.description.output_model_json)
 
-        
         while wa_resp.planning.test_retries in range(max_retry):
 
             if wa_resp.planning.planner_rerun_needed:

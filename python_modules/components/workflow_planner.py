@@ -348,7 +348,9 @@ class WorkflowPlanner:
             if error.error_type is self.workflow_error_types.PLANNING_MISSOUTPUT:
                 
                 additional_messages += [
-                    {"role": "user", "content": self.debug_prompts["mo"]}
+                    {"role": "user", "content": self.debug_prompts["mo"].format(
+                        output_model_schema = output_model.model_json_schema()
+                    )}
                 ]
                 retry_messages = init_messages + additional_messages 
 
@@ -403,7 +405,7 @@ class WorkflowPlanner:
                 additional_messages += [{'role' : 'assistant', "content" : llm_response}]
                 continue
 
-            if error.error_type is self.workflow_error_types.OUTPUTS_UNEXPECTED:
+            if error.error_type is self.workflow_error_types.PLANNING_RESET:
 
                 differences = error.additional_info.get("differences")
 

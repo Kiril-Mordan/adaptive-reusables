@@ -105,8 +105,15 @@ debug_prompts:
 
     Do not comment!
   mo: >
-    
+  
+    The following is the expected output model for the workflow, which should be included as additional workflow step named 'output_model'. 
+    Outputs from functions selected in the workflow should be able to populate its fields, 
+    given the task with format "source: <previous_workflow_step>.output.<field_name>" or "source: input_model.output.<field_name>". 
+
+    {output_model_schema}
+
     Your output is missing output_model, pls include it as a final step!
+
   unexpected: >
     
     Your planned workflow was assembled and ran using some example inputs. As a result of running your
@@ -114,7 +121,9 @@ debug_prompts:
 
     {differences}
 
-    Please adjust your workflow.
+    Please adjust steps in your workflow that might have contributed to those differences by changing inputs
+    to later refferenced steps or swapping functions for something else all together. Steps in the refferences
+    are in the same order as items in your planned workflow, starting with 1.
     
     Do not comment!
   

@@ -534,7 +534,8 @@ class WorkflowAdaptor:
                 else:
                     errors.append(error)
 
-                self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
+                self.logger.debug(f"Reset caused by {error.error_type.name} type error!",
+                    label = error.error_type.name)
                 self.logger.debug(f"Attempt for {func_name}: {retry_i}")
 
                 if error.error_type in [self.workflow_error_types.OUTPUTS_FAILURE, self.workflow_error_types.ADAPTOR_JSON]:
@@ -542,7 +543,7 @@ class WorkflowAdaptor:
                     mapping_errors = "\n ".join(iter(error.additional_info["error_messages"]))
 
                     additional_messages += [
-                        {"role": "assistant", "content": llm_response},
+                        # {"role": "assistant", "content": llm_response},
                         {"role": "user", "content": self.debug_prompts["mapping"].format(
                     mapping_errors = mapping_errors)}
                     ]
@@ -562,7 +563,7 @@ class WorkflowAdaptor:
                         difference_errors = json.dumps(differences)
 
                         additional_messages += [
-                            {"role": "assistant", "content": llm_response},
+                            # {"role": "assistant", "content": llm_response},
                             {"role": "user", "content": self.debug_prompts["unexpected"].format(
                         differences = difference_errors)}
                         ]
@@ -735,19 +736,22 @@ class WorkflowAdaptor:
             func_name = step['name']
         ) for step in workflow_s}
 
+        self.logger.debug("Adapting all steps!")
+
         # Create a list of tasks for each workflow step using adapt_func.
-        adapt_tasks = [asyncio.create_task(self._adapt_func(
+        adapt_tasks = [self._adapt_func(
             step_id = step["id"],
             func_name = step['name'],
             workflow = id_workflow,
             workflow_current_state_schema = workflow_current_state_schema[step['name']],
             available_functions = available_functions_t,
             id_func_mapping = id_func_mapping,
-            max_retry = max_retry)) \
-            for step in id_workflow if step["name"] != "input_model"]
+            max_retry = max_retry) for step in id_workflow if step["name"] != "input_model"]
         
         # Wait for all tasks to complete and gather their results.
         adapted_steps = await asyncio.gather(*adapt_tasks)
+
+        self.logger.debug("All steps were initially adapted!")
 
 
         adapted_workflow = [{
@@ -776,7 +780,8 @@ class WorkflowAdaptor:
         ):
 
 
-        self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
+        self.logger.debug(f"Reset caused by {error.error_type.name} type error!",
+            label = error.error_type.name)
 
         retried_step_id = adapted_workflow.all_errors[-1].additional_info["step_id"]
         retried_step = [step for step in adapted_workflow.workflow if step["id"] == retried_step_id][0]

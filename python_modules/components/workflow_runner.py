@@ -7,7 +7,7 @@ import attrsx
 from copy import deepcopy
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, Type
+from typing import List, Optional, Dict, Any, Type, Iterable
 from pydantic import BaseModel, Field, create_model
 import traceback
 from enum import Enum
@@ -56,6 +56,15 @@ class TestedWorkflow(BaseModel):
     inputs : BaseModel = Field(description="Inputs for test run.")
     outputs : Dict[str, BaseModel] = Field(description="Outputs from test run.")
     error : Optional[BaseModel] = Field(default = None, description="Error that happened during last run/test.")
+
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+
+class TestedWorkflowBatch(BaseModel):
+    workflow : List[WorkflowItem] = Field(description="Planned and tested workflow.")
+    case_results : List[TestedWorkflow] = Field(description="Per-case workflow run results.")
+    error : Optional[BaseModel] = Field(default = None, description="Aggregated error for all cases.")
 
     model_config = {
         "arbitrary_types_allowed": True
@@ -172,19 +181,18 @@ class WorkflowRunner:
 
         return create_model(schema["title"], **fields)
 
-    def run_workflow(self, 
+    def _run_single_case(self, 
         workflow : List[dict], 
-        test_params : List[Dict[str, Type[BaseModel]]] = None,
         inputs : Type[BaseModel] = None,
         expected_outputs : Type[BaseModel] = None,
         compare_params : dict = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
         input_model : Type[BaseModel] = None,
-        output_model : Type[BaseModel] = None):
+        output_model : Type[BaseModel] = None) -> TestedWorkflow:
 
         """
-        Runs llm planned workflow with provided inputs.
+        Runs llm planned workflow with provided inputs for a single test case.
         """
 
         if available_functions is None:
@@ -208,8 +216,6 @@ class WorkflowRunner:
         workflow = workflow.copy()
 
         outputs = {}
-
-        
 
         if inputs : 
             outputs["0"] = inputs
@@ -311,16 +317,21 @@ class WorkflowRunner:
             )
 
             if differences:
+                failing_step_ids = [
+                    d.get("source_step_id")
+                    for d in differences
+                    if isinstance(d.get("source_step_id"), int) and d.get("source_step_id") >= 1
+                ]
+                step_id = failing_step_ids[0] if failing_step_ids else len(workflow)
                 error_type = self.workflow_error_types.OUTPUTS_UNEXPECTED
                 error = self.workflow_error(
                         error_message = "Actual outputs do not match expected!",
                         error_type = error_type,
                         additional_info = {
-                            "step_id" : len(workflow),
-                            "differences" : differences}
+                            "step_id" : step_id,
+                            "differences" : differences,
+                            "failing_step_ids" : failing_step_ids}
                     )
-
-
 
         return TestedWorkflow(
             workflow = workflow, 
@@ -328,3 +339,94 @@ class WorkflowRunner:
             outputs = outputs, 
             error = error)
 
+    def run_workflow(self, 
+        workflow : List[dict], 
+        test_params : List[Dict[str, Type[BaseModel]]] = None,
+        inputs : Type[BaseModel] = None,
+        expected_outputs : Type[BaseModel] = None,
+        compare_params : dict = None,
+        available_functions : List[LlmFunctionItem] = None,
+        available_callables : Dict[str, callable] = None,
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None) -> TestedWorkflow | TestedWorkflowBatch:
+
+        """
+        Runs llm planned workflow with provided inputs.
+        Returns TestedWorkflow for single-case or TestedWorkflowBatch for multi-case.
+        """
+        if test_params and (inputs is not None or expected_outputs is not None):
+            raise ValueError("Provide either test_params or (inputs, expected_outputs), not both.")
+
+        if test_params:
+            case_results = []
+            failed_cases = []
+            differences_by_case = []
+            failing_step_ids = []
+
+            for idx, case in enumerate(test_params):
+                case_result = self._run_single_case(
+                    workflow = workflow,
+                    inputs = case.get("inputs"),
+                    expected_outputs = case.get("outputs"),
+                    compare_params = compare_params,
+                    available_functions = available_functions,
+                    available_callables = available_callables,
+                    input_model = input_model,
+                    output_model = output_model
+                )
+
+                case_results.append(case_result)
+                if case_result.error is not None:
+                    failed_cases.append(idx)
+                    error_info = getattr(case_result.error, "additional_info", None)
+                    if isinstance(error_info, dict):
+                        differences = error_info.get("differences")
+                        if differences:
+                            differences_by_case.append({"case_id": idx, "differences": differences})
+                        step_id = error_info.get("step_id")
+                        if step_id is not None:
+                            failing_step_ids.append(step_id)
+
+            aggregated_error = None
+            if failed_cases:
+                error_types = []
+                for case in case_results:
+                    if case.error is not None:
+                        error_types.append(getattr(case.error, "error_type", None))
+
+                error_type = None
+                if error_types:
+                    error_type = error_types[0]
+                    if any(et != error_type for et in error_types):
+                        # Mixed failure modes across cases; collapse to a generic unexpected-outputs error.
+                        error_type = self.workflow_error_types.OUTPUTS_UNEXPECTED
+                else:
+                    error_type = self.workflow_error_types.OUTPUTS_UNEXPECTED
+
+                aggregated_error = self.workflow_error(
+                    error_message = "One or more test cases failed.",
+                    error_type = error_type,
+                    additional_info = {
+                        "failed_cases": failed_cases,
+                        "differences_by_case": differences_by_case,
+                        "failing_step_ids": failing_step_ids,
+                        "error_types_by_case": error_types
+                    }
+                )
+
+            return TestedWorkflowBatch(
+                workflow = workflow,
+                case_results = case_results,
+                error = aggregated_error
+            )
+
+        return self._run_single_case(
+            workflow = workflow,
+            inputs = inputs,
+            expected_outputs = expected_outputs,
+            compare_params = compare_params,
+            available_functions = available_functions,
+            available_callables = available_callables,
+            input_model = input_model,
+            output_model = output_model
+        )

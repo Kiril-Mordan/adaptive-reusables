@@ -23,6 +23,7 @@ system_message_items:
       1. `"name"` (string) - the tool's name from the list below.
       2. `"args"` (object) - any arguments the tool requires.
     - **Important:** If a function argument is intended to be sourced from a previous step's output, indicate this using the format: "source: <previous_function_name>.output.<field_name>".
+    - **No expressions:** All argument values must be valid JSON literals (string/number/boolean/null/object/array). Do not use operators like `+` or string concatenation. If you need to include a referenced value inside a longer message, put the full message as a single JSON string (for example: "Converted value: source: convert_units.output.converted_value").
       
     ### Expected Format
 
@@ -113,6 +114,13 @@ debug_prompts:
     {output_model_schema}
 
     Your output is missing output_model, pls include it as a final step!
+  om: >
+  
+    The output_model step exists but its "args" are missing or empty.
+    Pls include all required output_model fields and map them from previous steps or input_model.
+  
+    The expected output model schema is:
+    {output_model_schema}
 
   unexpected: >
     
@@ -121,9 +129,15 @@ debug_prompts:
 
     {differences}
 
+    The differences may include a summary line like "Unsatisfied output fields: ...", and may include case ids
+    when multiple test cases were used. Use this info to rethink the workflow wiring.
+
     Please adjust steps in your workflow that might have contributed to those differences by changing inputs
     to later refferenced steps or swapping functions for something else all together. Steps in the refferences
     are in the same order as items in your planned workflow, starting with 1.
+    If output fields are unsatisfied, consider rewiring the output_model mappings to different existing steps
+    or to input_model fields when appropriate. If rewiring is not enough, change functions or reorder steps.
+    Do not repeat the exact same wiring that produced the mismatched outputs.
     
     Do not comment!
   

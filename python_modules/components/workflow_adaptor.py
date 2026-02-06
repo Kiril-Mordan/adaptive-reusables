@@ -435,6 +435,25 @@ class WorkflowAdaptor:
                     "step_id" : step_id,
                     "error_messages" : ['Provided output is not json!']})
 
+        if isinstance(function_calls, list):
+            matched = None
+            for item in function_calls:
+                if not isinstance(item, dict):
+                    continue
+                item_id = item.get("id")
+                if item_id is not None and str(item_id) == str(step_id):
+                    matched = item
+                    break
+                if item.get("name") == current_function:
+                    matched = item
+            if matched is None or not isinstance(matched.get("args"), dict):
+                return self.workflow_error(
+                    error_type = self.workflow_error_types.ADAPTOR_JSON,
+                    additional_info = {
+                        "step_id" : step_id,
+                        "error_messages" : ["Provided output is a workflow list but no matching step args were found."]})
+            function_calls = matched.get("args")
+
         try:
             mapping_errors = self._check_complex_mapping(
                 mapping = function_calls, 
@@ -516,6 +535,19 @@ class WorkflowAdaptor:
 
                 if error is None:
                     adapted_schema = self._read_json_output(output=llm_response)
+                    if isinstance(adapted_schema, list):
+                        matched = None
+                        for item in adapted_schema:
+                            if not isinstance(item, dict):
+                                continue
+                            item_id = item.get("id")
+                            if item_id is not None and str(item_id) == str(step_id):
+                                matched = item
+                                break
+                            if item.get("name") == func_name:
+                                matched = item
+                        if matched and isinstance(matched.get("args"), dict):
+                            adapted_schema = matched.get("args")
                     return WorkflowAdaptorStep(
                         step_id = step_id,
                         func_name = func_name,
@@ -534,15 +566,23 @@ class WorkflowAdaptor:
                 else:
                     errors.append(error)
 
-                self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
+                self.logger.debug(f"Reset caused by {error.error_type.name} type error!",
+                    label = error.error_type.name)
                 self.logger.debug(f"Attempt for {func_name}: {retry_i}")
 
                 if error.error_type in [self.workflow_error_types.OUTPUTS_FAILURE, self.workflow_error_types.ADAPTOR_JSON]:
 
-                    mapping_errors = "\n ".join(iter(error.additional_info["error_messages"]))
+                    error_messages = []
+                    if error.additional_info and isinstance(error.additional_info, dict):
+                        error_messages = error.additional_info.get("error_messages") or []
+                    if not isinstance(error_messages, list):
+                        error_messages = [str(error_messages)]
+                    if not error_messages:
+                        error_messages = [str(error)]
+                    mapping_errors = "\n ".join(iter(error_messages))
 
                     additional_messages += [
-                        {"role": "assistant", "content": llm_response},
+                        # {"role": "assistant", "content": llm_response},
                         {"role": "user", "content": self.debug_prompts["mapping"].format(
                     mapping_errors = mapping_errors)}
                     ]
@@ -562,7 +602,7 @@ class WorkflowAdaptor:
                         difference_errors = json.dumps(differences)
 
                         additional_messages += [
-                            {"role": "assistant", "content": llm_response},
+                            # {"role": "assistant", "content": llm_response},
                             {"role": "user", "content": self.debug_prompts["unexpected"].format(
                         differences = difference_errors)}
                         ]
@@ -735,19 +775,22 @@ class WorkflowAdaptor:
             func_name = step['name']
         ) for step in workflow_s}
 
+        self.logger.debug("Adapting all steps!")
+
         # Create a list of tasks for each workflow step using adapt_func.
-        adapt_tasks = [asyncio.create_task(self._adapt_func(
+        adapt_tasks = [self._adapt_func(
             step_id = step["id"],
             func_name = step['name'],
             workflow = id_workflow,
             workflow_current_state_schema = workflow_current_state_schema[step['name']],
             available_functions = available_functions_t,
             id_func_mapping = id_func_mapping,
-            max_retry = max_retry)) \
-            for step in id_workflow if step["name"] != "input_model"]
+            max_retry = max_retry) for step in id_workflow if step["name"] != "input_model"]
         
         # Wait for all tasks to complete and gather their results.
         adapted_steps = await asyncio.gather(*adapt_tasks)
+
+        self.logger.debug("All steps were initially adapted!")
 
 
         adapted_workflow = [{
@@ -776,9 +819,28 @@ class WorkflowAdaptor:
         ):
 
 
-        self.logger.debug(f"Reset caused by {error.error_type.name} type error!")
+        self.logger.debug(f"Reset caused by {error.error_type.name} type error!",
+            label = error.error_type.name)
 
-        retried_step_id = adapted_workflow.all_errors[-1].additional_info["step_id"]
+        # For OUTPUTS_UNEXPECTED, prefer re-adapting output_model mapping first.
+        if error.error_type is self.workflow_error_types.OUTPUTS_UNEXPECTED:
+            output_steps = [step for step in adapted_workflow.workflow if step.get("name") == "output_model"]
+            if output_steps:
+                retried_step_id = output_steps[-1].get("id")
+            else:
+                retried_step_id = None
+        else:
+            retried_step_id = None
+
+        if retried_step_id is None and adapted_workflow.all_errors and adapted_workflow.all_errors[-1].additional_info:
+            retried_step_id = adapted_workflow.all_errors[-1].additional_info.get("step_id")
+            if retried_step_id is None:
+                retried_step_ids = adapted_workflow.all_errors[-1].additional_info.get("failing_step_ids")
+                if retried_step_ids:
+                    retried_step_id = retried_step_ids[0]
+
+        if retried_step_id is None:
+            raise ValueError("Cannot reset step: missing step_id in error additional_info.")
         retried_step = [step for step in adapted_workflow.workflow if step["id"] == retried_step_id][0]
         retried_step_obj = [step_obj for step_obj in adapted_workflow.steps if step_obj.step_id == retried_step_id][0]
 

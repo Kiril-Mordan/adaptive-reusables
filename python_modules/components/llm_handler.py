@@ -172,6 +172,8 @@ class LlmHandler:
     
     llm_h_class = attrs.field(default = None)
     llm_h = attrs.field(default = None)
+    _id_counter = 0
+
 
     def __attrs_post_init__(self):
 
@@ -187,13 +189,22 @@ class LlmHandler:
         if self.llm_h is None:
             self.llm_h = self.llm_h_class(**self.llm_h_params)
 
+    @classmethod
+    def _gen_id(self) -> int:
+        self._id_counter += 1
+        return self._id_counter
+
+
     async def chat(self, 
                    messages: List[Dict[str, str]], 
                    model_name: Optional[str] = None) -> LlmHandlerChatOutput:
         """
         Core chat method.
         """
-        
+        uid = self._gen_id()
+        input_messages = [LlmMessage(**d) for d in messages]
+        self.logger.debug(f"-> {uid}", 
+            save_vars = ["input_messages"])
         try:
 
             response = await self.llm_h.chat(
@@ -203,6 +214,19 @@ class LlmHandler:
         except Exception as e:
             response = None
             self.logger.error(f"LLM Handler Error: {e}")
+
+        self.logger.debug(f"<- {uid}", 
+            save_vars = ["response.message"],
+            actions = [
+                {
+                    "name" : "langfuse.log_trace",
+                    "params" : {
+                        "input" : input_messages,
+                        "output" : response.message
+                    }
+                }
+            ]
+        )
 
         return response
 

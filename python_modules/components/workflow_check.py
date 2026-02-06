@@ -60,7 +60,7 @@ class WorkflowCheck:
     prompts_filepath : str = attrs.field(default=None)
     available_functions : list = attrs.field(default=None)
 
-    n_checks : int = attrs.field(default=5)
+    n_checks : int = attrs.field(default=7)
     max_retry : int = attrs.field(default=5)
 
     """
@@ -225,9 +225,11 @@ class WorkflowCheck:
 
     async def _get_llm_response(self, messages, n_checks):
 
-        requests = [self.llm_h.chat(messages) for i in range(n_checks)]
+        tasks = [self.llm_h.chat(messages) for i in range(n_checks)]
 
-        responses = await asyncio.gather(*requests)
+        responses = await asyncio.gather(*tasks)
+
+
         llm_responses = [response.message.content for response in responses] 
 
         checked_workflow_items_v = [self._read_json_output(output=llm_response) for llm_response in llm_responses] 
@@ -273,6 +275,8 @@ class WorkflowCheck:
             raise ValueError("Input available_functions : list cannot be None!")
 
         if checked_workflow is None:
+
+            self.logger.debug(f"Running initial check...")
         
             init_messages = self._prep_init_messages(
                 available_functions = available_functions, 
@@ -311,6 +315,7 @@ class WorkflowCheck:
 
             if error is None:
                 checked_workflow_items = self._read_json_output(output=llm_response)
+                self.logger.debug(f"Decision from initial check is ready!")
                 return WorkflowCheckResponse(
                     errors = errors,
                     retries = retry_i,
@@ -338,6 +343,7 @@ class WorkflowCheck:
 
             
         if retry_i == max_retry:
+            self.logger.warning(f"Initial check ran out of retries!")
             return WorkflowCheckResponse(
                 errors = errors,
                 retries = retry_i,

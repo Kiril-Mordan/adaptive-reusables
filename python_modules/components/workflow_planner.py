@@ -244,6 +244,17 @@ class WorkflowPlanner:
             if "output_model" not in [fc["name"] for fc in function_calls]:
                 return self.workflow_error(error_type = self.workflow_error_types.PLANNING_MISSOUTPUT,
                 additional_info = {"llm_response" : llm_response})
+            output_steps = [fc for fc in function_calls if fc.get("name") == "output_model"]
+            for step in output_steps:
+                args = step.get("args")
+                if not isinstance(args, dict) or len(args) == 0:
+                    return self.workflow_error(
+                        error_type = self.workflow_error_types.PLANNING_OUTPUT_MODEL,
+                        additional_info = {
+                            "llm_response": llm_response,
+                            "reason": "output_model_missing_args"
+                        }
+                    )
 
         return None
 
@@ -342,13 +353,29 @@ class WorkflowPlanner:
                 retry_messages = init_messages
                 debug_response = await self.llm_h.chat(retry_messages)
                 llm_response = debug_response.message.content
-                additional_messages[-1] = [{'role' : 'assistant', "content" : llm_response}]
+                additional_messages[-1] = {"role" : "assistant", "content" : llm_response}
                 continue
 
             if error.error_type is self.workflow_error_types.PLANNING_MISSOUTPUT:
                 
                 additional_messages += [
-                    {"role": "user", "content": self.debug_prompts["mo"]}
+                    {"role": "user", "content": self.debug_prompts["mo"].format(
+                        output_model_schema = output_model.model_json_schema()
+                    )}
+                ]
+                retry_messages = init_messages + additional_messages 
+
+                debug_response = await self.llm_h.chat(retry_messages)
+                llm_response = debug_response.message.content
+                additional_messages += [{'role' : 'assistant', "content" : llm_response}]
+                continue
+
+            if error.error_type is self.workflow_error_types.PLANNING_OUTPUT_MODEL:
+
+                additional_messages += [
+                    {"role": "user", "content": self.debug_prompts["om"].format(
+                        output_model_schema = output_model.model_json_schema()
+                    )}
                 ]
                 retry_messages = init_messages + additional_messages 
 
@@ -403,13 +430,36 @@ class WorkflowPlanner:
                 additional_messages += [{'role' : 'assistant', "content" : llm_response}]
                 continue
 
-            if error.error_type is self.workflow_error_types.OUTPUTS_UNEXPECTED:
+            if error.error_type is self.workflow_error_types.PLANNING_RESET:
 
                 differences = error.additional_info.get("differences")
+                failing_paths = error.additional_info.get("failing_paths")
+                failing_sources = None
+                if differences:
+                    try:
+                        failing_sources = sorted({d.get("source_step_id") for d in differences if isinstance(d, dict) and d.get("source_step_id")})
+                    except Exception:
+                        failing_sources = None
+                if failing_paths:
+                    failing_summary = "Unsatisfied output fields: " + ", ".join(failing_paths)
+                    if differences:
+                        differences = [failing_summary] + list(differences)
+                    else:
+                        differences = [failing_summary]
+                if failing_sources:
+                    source_summary = "Source steps that produced mismatches: " + ", ".join([str(s) for s in failing_sources])
+                    if differences:
+                        differences = [source_summary] + list(differences)
+                    else:
+                        differences = [source_summary]
 
+                formatted_differences = "\n -".join(
+                    [json.dumps(d) if isinstance(d, dict) else str(d) for d in (differences or ["(no differences provided)"])]
+                )
                 additional_messages += [
                     {"role": "user", "content": self.debug_prompts["unexpected"].format(
-                        differences = "\n -".join(differences))}
+                        differences = formatted_differences
+                    )}
                 ]
 
                 retry_messages = init_messages + additional_messages

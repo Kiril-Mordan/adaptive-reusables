@@ -46,6 +46,10 @@ check_prompt: >
 
   {output_schema}
 
+  If the task description includes steps that are not explicitly represented in the output schema, you may ignore those extra steps.
+  However, each required output field must be produced by a function whose name/description clearly matches the field’s intent. Do not map unrelated outputs simply because the types are compatible.
+  If a required output implies a specific operation (e.g., persistence, verification, generation), you must have a function that explicitly performs that operation; otherwise decision must be false.
+
 check_prompt_items: 
   input_schema : > 
     ---

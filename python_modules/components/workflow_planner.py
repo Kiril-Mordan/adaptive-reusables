@@ -9,6 +9,7 @@ import attrsx
 from copy import deepcopy
 import yaml
 import os
+import json
 
 import importlib
 import importlib.metadata
@@ -59,7 +60,7 @@ class WorkflowPlanner:
     plan_prompt_items : Dict[str, str] = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
-    available_functions: List[LlmFunctionItem] = attrs.field(
+    available_functions: List[Any] = attrs.field(
         default=None,
         converter=lambda v: None if v is None else deepcopy(v),
     )

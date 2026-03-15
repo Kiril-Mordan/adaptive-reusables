@@ -1,0 +1,473 @@
+{
+  "per_task": {
+    "overall": {
+      "runs": 125,
+      "completed": 99,
+      "possible": 99,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_web": 19,
+        "summarize_text": 36,
+        "rewrite_text": 19,
+        "currency_exchange": 10,
+        "generate_report": 30,
+        "send_sms": 25,
+        "translate_text": 10,
+        "query_database": 20,
+        "check_availability": 5,
+        "create_order": 15,
+        "send_report_email": 30,
+        "transcribe_audio": 15,
+        "detect_sentiment": 25,
+        "store_file": 15,
+        "check_order_status": 10,
+        "extract_keywords": 19,
+        "convert_units": 15,
+        "lookup_coordinates": 25,
+        "get_weather": 20,
+        "upload_image": 17,
+        "detect_objects": 5,
+        "calculate_distance": 20,
+        "load_file": 10,
+        "generate_plot": 10
+      },
+      "test_cases_total": 990,
+      "test_cases_failed": 0,
+      "avg_test_retries": 0.048,
+      "avg_workflow_steps": 5.2929,
+      "success_rate": 0.792,
+      "test_pass_rate": 1.0
+    },
+    "task_19": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_web": 5,
+        "summarize_text": 5,
+        "rewrite_text": 5,
+        "currency_exchange": 5,
+        "generate_report": 5,
+        "send_sms": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 7.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_1": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "translate_text": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 2.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_13": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_database": 5,
+        "check_availability": 5,
+        "create_order": 5,
+        "send_report_email": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 5.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_18": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "transcribe_audio": 5,
+        "detect_sentiment": 5,
+        "store_file": 5,
+        "create_order": 5,
+        "check_order_status": 5,
+        "send_report_email": 5,
+        "summarize_text": 3
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 7.6,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_2": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "summarize_text": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 2.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_3": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "detect_sentiment": 5,
+        "extract_keywords": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 3.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_4": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "convert_units": 5,
+        "send_sms": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 3.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_5": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "lookup_coordinates": 5,
+        "get_weather": 5,
+        "generate_report": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_6": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_database": 5,
+        "translate_text": 5,
+        "upload_image": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_7": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "transcribe_audio": 5,
+        "summarize_text": 5,
+        "detect_sentiment": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_8": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "get_weather": 5,
+        "convert_units": 5,
+        "generate_report": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_10": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "detect_objects": 5,
+        "summarize_text": 3,
+        "send_report_email": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 3.6,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_11": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "calculate_distance": 5,
+        "currency_exchange": 5,
+        "send_sms": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_12": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "load_file": 5,
+        "summarize_text": 5,
+        "store_file": 5,
+        "send_report_email": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 5.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_14": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "lookup_coordinates": 10,
+        "calculate_distance": 5,
+        "generate_plot": 5,
+        "upload_image": 2
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 5.4,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_15": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_web": 5,
+        "detect_sentiment": 5,
+        "extract_keywords": 5,
+        "summarize_text": 5,
+        "rewrite_text": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 6.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_16": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "get_weather": 5,
+        "lookup_coordinates": 5,
+        "transcribe_audio": 5,
+        "generate_report": 5,
+        "send_report_email": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 6.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_17": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_database": 5,
+        "calculate_distance": 5,
+        "generate_report": 5,
+        "upload_image": 5,
+        "send_sms": 5
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 6.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_20": {
+      "runs": 5,
+      "completed": 5,
+      "possible": 5,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_database": 5,
+        "query_web": 5,
+        "extract_keywords": 5,
+        "summarize_text": 5,
+        "detect_sentiment": 5,
+        "rewrite_text": 5,
+        "lookup_coordinates": 5,
+        "get_weather": 5,
+        "convert_units": 5,
+        "calculate_distance": 5,
+        "generate_plot": 5,
+        "generate_report": 5,
+        "store_file": 5,
+        "load_file": 5,
+        "upload_image": 5,
+        "create_order": 5,
+        "check_order_status": 5,
+        "send_sms": 5,
+        "send_report_email": 5
+      },
+      "avg_test_retries": 0.4,
+      "avg_workflow_steps": 20.0,
+      "test_cases_total": 50,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_21": {
+      "runs": 5,
+      "completed": 0,
+      "possible": 0,
+      "error_type_counts": {},
+      "tool_usage_counts": {},
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": null,
+      "test_cases_total": 0,
+      "test_cases_failed": 0,
+      "success_rate": 0.0,
+      "test_pass_rate": null
+    },
+    "task_22": {
+      "runs": 5,
+      "completed": 0,
+      "possible": 0,
+      "error_type_counts": {},
+      "tool_usage_counts": {},
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": null,
+      "test_cases_total": 0,
+      "test_cases_failed": 0,
+      "success_rate": 0.0,
+      "test_pass_rate": null
+    },
+    "task_23": {
+      "runs": 5,
+      "completed": 0,
+      "possible": 0,
+      "error_type_counts": {},
+      "tool_usage_counts": {},
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": null,
+      "test_cases_total": 0,
+      "test_cases_failed": 0,
+      "success_rate": 0.0,
+      "test_pass_rate": null
+    },
+    "task_24": {
+      "runs": 5,
+      "completed": 0,
+      "possible": 0,
+      "error_type_counts": {},
+      "tool_usage_counts": {},
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": null,
+      "test_cases_total": 0,
+      "test_cases_failed": 0,
+      "success_rate": 0.0,
+      "test_pass_rate": null
+    },
+    "task_25": {
+      "runs": 5,
+      "completed": 0,
+      "possible": 0,
+      "error_type_counts": {},
+      "tool_usage_counts": {},
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": null,
+      "test_cases_total": 0,
+      "test_cases_failed": 0,
+      "success_rate": 0.0,
+      "test_pass_rate": null
+    },
+    "task_9": {
+      "runs": 5,
+      "completed": 4,
+      "possible": 4,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "query_web": 4,
+        "extract_keywords": 4,
+        "rewrite_text": 4
+      },
+      "avg_test_retries": 0.8,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 40,
+      "test_cases_failed": 0,
+      "success_rate": 0.8,
+      "test_pass_rate": 1.0
+    }
+  }
+}

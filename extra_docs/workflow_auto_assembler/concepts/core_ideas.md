@@ -1,4 +1,4 @@
-# Concepts and Mental Model
+# Core Ideas
 
 This page explains the core ideas behind Workflow Auto Assembler (WAA) and how to think about it when designing your tools and tasks.
 
@@ -65,3 +65,4 @@ If you provide:
 - simple test cases
 
 you get predictable and reusable workflows.
+

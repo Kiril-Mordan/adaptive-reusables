@@ -1,6 +1,24 @@
 """
-The module contains tools to generate a functional workflow with a use of llm given tool 
-in a form of annotated functions.
+Workflow Auto Assembler (WAA) is an experimental schema-first workflow synthesis tool.
+It uses an LLM to assemble simple executable workflows from a task description, target
+input/output models, and a catalog of available typed tools.
+
+WAA is built around a narrow idea: instead of asking the model to solve a task
+directly, expose tools through explicit schemas and let the model construct a linear
+workflow whose intermediate states can be validated and tested. The resulting workflow
+is persisted as an explicit artifact with I/O mappings, which makes it inspectable,
+re-runnable, and easier to validate than a transient agent trace.
+
+### Why Workflow-Auto-Assembler?
+
+WAA treats tool selection and wiring as a schema-matching problem. When the required
+capabilities exist in the available tool catalog, the assembled workflow can behave
+like a larger typed function composed from smaller typed functions.
+
+This package should be read as experimental adaptive tooling rather than a claim of
+general autonomous planning. Its strongest use case is simple linear workflow assembly
+under explicit schema constraints, with runner-based validation used to check that the
+assembled workflow satisfies the requested output contract.
 """
 
 import attrs
@@ -8,22 +26,29 @@ import attrsx
 
 import uuid
 import json
-from typing import Type
+from copy import deepcopy
+from typing import Type, Optional, List, Dict, Callable
 from pydantic import BaseModel, Field
 
-from .components.wa_general_models import LlmFunctionItem, WorkflowErrorType, WorkflowError, create_avc_items, LlmFunctionItemInput, make_uid
-from .components.llm_function.llm_handler import LlmHandler
+from .components.wa_general_models import (
+    LlmFunctionItem, 
+    WorkflowErrorType, 
+    WorkflowError, 
+    create_avc_items, 
+    LlmFunctionItemInput, 
+    make_uid)
+from .components.llm_handler import LlmHandler
 from .components.workflow_check import WorkflowCheck, WorkflowCheckResponse
 from .components.workflow_planner import WorkflowPlanner, WorkflowPlannerResponse
 from .components.workflow_adaptor import WorkflowAdaptor, WorkflowAdaptorResponse
-from .components.input_collector import InpuCollector
+from .components.input_collector import InputCollector
 from .components.output_comparer import OutputComparer
 from .components.workflow_runner import WorkflowRunner, TestedWorkflow, TestedWorkflowBatch
 
 __package_metadata__ = {
     "author": "Kyrylo Mordan",
     "author_email": "parachute.repo@gmail.com",
-    "description": "LLM-based planner and orchestrator that turns existing code into complex functions.",
+    "description": "Experimental schema-first workflow synthesis tool for assembling simple typed workflows from existing functions.",
 }
 
 class PlanningStepsResp(BaseModel):
@@ -37,7 +62,7 @@ class PlanningStepsResp(BaseModel):
     testing_errors : Optional[List[WorkflowError]] = Field(default = [], description = "Errors during testing workflow.")
     test_retries : int = Field(default = 0, description = "Retries completed during planning and testing loop.")
 
-class WorfklowDescription(BaseModel):
+class WorkflowDescription(BaseModel):
     task_description : Optional[str] = Field(default = None, description="Description of the workflow.")
     input_model_json : Optional[dict] = Field(default = None, description="Input model for workflow.")
     output_model_json : Optional[dict] = Field(default = None, description="Output model for workflow.")
@@ -50,8 +75,8 @@ class AssembledWorkflow(BaseModel):
     workflow_possible : Optional[bool] = Field(default = None, description = "Indicates if workflow could be planned given provided tools.")
     workflow_completed : Optional[bool] = Field(default = False, description = "Indicates if workflow was completed in the preset amount of retries.")
     workflow : Optional[dict] = Field(default = None, description = "Planned and tested workflow.")
-    description : Optional[WorfklowDescription] = Field(default = WorfklowDescription(), description = "Workflow description.")
-
+    description : Optional[WorkflowDescription] = Field(default = WorkflowDescription(), description = "Workflow description.")
+    loops : Optional[int] = Field(default = 1, description = "Retries completed during planning and testing loop.")
 
 @attrsx.define(handler_specs = {
         #"shouter" : Shouter,
@@ -82,7 +107,8 @@ class WorkflowAutoAssembler:
     )
 
     max_output_unexpected : int = attrs.field(default=3)
-    max_retry : int = attrs.field(default=5)
+    max_retry : int = attrs.field(default=10)
+    reset_loops : int = attrs.field(default=2)
 
     def __attrs_post_init__(self):
 
@@ -101,6 +127,7 @@ class WorkflowAutoAssembler:
             "llm_h" : self.llm_handler_h,
             "input_collector_h" : self.input_collector_h,
             "available_functions" : self.available_functions,
+            "llm_function_item_class" : LlmFunctionItem,
             "workflow_error_types" : self.workflow_error_types,
             "workflow_error" : self.workflow_error,
             "max_retry" : self.max_retry
@@ -238,6 +265,29 @@ class WorkflowAutoAssembler:
 
         return wa_resp
 
+    def _init_wa_obj(self, 
+        task_description : str,
+        input_model : Type[BaseModel] = None,
+        output_model : Type[BaseModel] = None,
+        loops : int = 1,
+        init_check : Optional[WorkflowCheckResponse] = None,
+        ):
+
+        return AssembledWorkflow(
+            id = uuid.uuid4().hex,
+            input_id = make_uid(d = {
+                "task_description" : task_description,
+                "input_model" : input_model.model_json_schema() if input_model else "",
+                "output_model" : output_model.model_json_schema() if output_model else ""
+                }),
+            init_check = init_check,
+            description = WorkflowDescription(
+                task_description = task_description,
+                input_model_json = input_model.model_json_schema() if input_model else None,
+                output_model_json = output_model.model_json_schema() if output_model else None
+            ),
+            loops = loops
+        )
 
     async def plan_workflow(
         self,
@@ -248,7 +298,8 @@ class WorkflowAutoAssembler:
         output_model : Type[BaseModel] = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
-        max_retry : Optional[int] = None):
+        max_retry : Optional[int] = None,
+        reset_loops : Optional[int] = None):
 
         """
         Uses LLM to plans workflow based on provided tools and description.
@@ -256,19 +307,14 @@ class WorkflowAutoAssembler:
 
         if max_retry is None:
             max_retry = self.max_retry
+        
+        if reset_loops is None:
+            reset_loops = self.reset_loops
 
-        wa_resp = AssembledWorkflow(
-            id = uuid.uuid4().hex,
-            input_id = make_uid(d = {
-                "task_description" : task_description,
-                "input_model" : input_model.model_json_schema() if input_model else "",
-                "output_model" : output_model.model_json_schema() if input_model else ""
-                }),
-            description = WorfklowDescription(
-                task_description = task_description,
-                input_model_json = input_model.model_json_schema(),
-                output_model_json = output_model.model_json_schema()
-            )
+        wa_resp = self._init_wa_obj(
+            task_description = task_description,
+            input_model = input_model,
+            output_model = output_model
         )
 
         self.logger.debug(f"Starting workflow planning ...", label = "START")
@@ -327,7 +373,6 @@ class WorkflowAutoAssembler:
                     workflow = wa_resp.planning.adaptor.workflow, 
                     test_params = test_params,
                     compare_params = compare_params,
-                    input_model = input_model,
                     output_model = output_model,
                     available_functions = available_functions,
                     available_callables = available_callables
@@ -346,6 +391,23 @@ class WorkflowAutoAssembler:
             if wa_resp.planning.tester and wa_resp.planning.tester.error:
                 self.logger.warning(
                     f"Planning loop failed with {wa_resp.planning.tester.error.error_type} during testing. Attempts left {max_retry - wa_resp.planning.test_retries} !")
+
+            if wa_resp.planning.test_retries == (max(max_retry,1)-1):
+                
+                if reset_loops > 0:
+                
+                    self.logger.warning(
+                        f"Planning failed to converge, reseting!")
+                    reset_loops = reset_loops - 1
+                    prev_check = wa_resp.init_check
+                    wa_resp = self._init_wa_obj(
+                        task_description = task_description,
+                        input_model = input_model,
+                        output_model = output_model,
+                        loops = wa_resp.loops + 1,
+                        init_check = prev_check,
+                    )
+
 
         if wa_resp.init_check.workflow_possible and wa_resp.planning.adaptor:  
             wa_resp.workflow = wa_resp.planning.adaptor.workflow
@@ -366,7 +428,8 @@ class WorkflowAutoAssembler:
         output_model : Type[BaseModel] = None,
         available_functions : List[LlmFunctionItem] = None,
         available_callables : Dict[str, callable] = None,
-        max_retry : Optional[int] = None):
+        max_retry : Optional[int] = None,
+        reset_loops : Optional[int] = None):
 
         """
         Uses LLM to plans workflow based on provided tools and description.
@@ -375,9 +438,11 @@ class WorkflowAutoAssembler:
         if max_retry is None:
             max_retry = self.max_retry
 
+        if reset_loops is None:
+            reset_loops = self.reset_loops
+
         wa_resp = workflow_object.copy()
   
-
         if input_model is None:
             input_model = self.runner_h.json_schema_to_base_model(
                 workflow_object.description.input_model_json)
@@ -414,7 +479,6 @@ class WorkflowAutoAssembler:
                 wa_resp.planning.tester = self.runner_h.run_workflow(
                     workflow = wa_resp.planning.adaptor.workflow, 
                     inputs = run_inputs,
-                    input_model = input_model,
                     output_model = output_model,
                     available_functions = available_functions,
                     available_callables = available_callables
@@ -437,6 +501,21 @@ class WorkflowAutoAssembler:
             self.logger.warning(
                 f"Planning loop failed with {wa_resp.planning.tester.error.error_type} during testing. Attempts left {max_retry - wa_resp.planning.test_retries} !")
 
+            if wa_resp.planning.test_retries == (max(max_retry,1)-1):
+                
+                if reset_loops > 0:
+                
+                    self.logger.warning(
+                        f"Planning failed to converge, reseting!")
+                    reset_loops = reset_loops - 1
+                    prev_check = wa_resp.init_check
+                    wa_resp = self._init_wa_obj(
+                        task_description = task_description,
+                        input_model = input_model,
+                        output_model = output_model,
+                        loops = wa_resp.loops + 1,
+                        init_check = prev_check,
+                    )
             
         wa_resp.workflow = wa_resp.planning.adaptor.workflow
 

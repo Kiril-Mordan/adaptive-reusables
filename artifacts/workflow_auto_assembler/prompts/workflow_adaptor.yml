@@ -42,6 +42,7 @@ system_message_items:
     If the selected function's input schema has required fields, your output must be a JSON object that includes all required fields.
     Do not return null for the entire args object when required fields exist. Return an object with explicit fields instead.
     If the input schema has no required fields, an empty object {} is acceptable.
+    Always return a JSON object (not null, not a list). Preserve any valid literals already present in the planned workflow.
 
     For instance, if the required mapping is:
 
@@ -87,4 +88,3 @@ debug_prompts:
     Please adjust your workflow.
     
     Do not comment!
-

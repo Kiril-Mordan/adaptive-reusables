@@ -1,8 +1,10 @@
-import logging
-import attrsx
-import attrs
 from datetime import datetime
-from typing import Optional, List, Dict
+import importlib
+import logging
+from typing import Optional, List, Dict, Any
+import attrs
+import attrsx
+from pydantic import BaseModel, Field
 
 #! import openai
 #! import ollama
@@ -18,15 +20,44 @@ class LlmHandlerBaseResponse(BaseModel):
     created_at: Optional[str] = Field(default = None, description ='Time when the request was created.')
     total_duration: Optional[int] = Field(default = None, description ='Total duration in nanoseconds.')
 
+    def as_dict(self) -> dict:
+        """Return a dict representation of the response."""
+        if hasattr(self, "model_dump"):
+            return self.model_dump()
+        return self.dict()
+
+    def as_json(self) -> str:
+        """Return a JSON string representation of the response."""
+        if hasattr(self, "model_dump_json"):
+            return self.model_dump_json()
+        return self.json()
 
 class LlmMessage(BaseModel):
-  """
-  Chat message based on Ollama.
-  """
+    """
+    Chat message based on Ollama.
+    """
 
-  role: str = Field(description ="Assumed role of the message. Response messages has role 'assistant' or 'tool'.")  
-  content: Optional[str] = Field(default = None, description ="Content of the message. Response messages contains message fragments when streaming.")
-  thinking: Optional[str] = Field(default = None, description ="Thinking content. Only present when thinking is enabled.")
+    role: str = Field(description="Assumed role of the message. Response messages has role 'assistant' or 'tool'.")
+    content: Optional[str] = Field(
+        default=None,
+        description="Content of the message. Response messages contains message fragments when streaming.",
+    )
+    thinking: Optional[str] = Field(
+        default=None,
+        description="Thinking content. Only present when thinking is enabled.",
+    )
+
+    def as_dict(self) -> dict:
+        """Return a dict representation of the message."""
+        if hasattr(self, "model_dump"):
+            return self.model_dump()
+        return self.dict()
+
+    def as_json(self) -> str:
+        """Return a JSON string representation of the message."""
+        if hasattr(self, "model_dump_json"):
+            return self.model_dump_json()
+        return self.json()
 
 
 class LlmHandlerChatOutput(LlmHandlerBaseResponse):
@@ -36,7 +67,17 @@ class LlmHandlerChatOutput(LlmHandlerBaseResponse):
     """
 
     message: Optional[LlmMessage] = Field(default = None, description ='Response message.')
-    
+    def as_dict(self) -> dict:
+        """Return a dict representation of the chat output."""
+        if hasattr(self, "model_dump"):
+            return self.model_dump()
+        return self.dict()
+
+    def as_json(self) -> str:
+        """Return a JSON string representation of the chat output."""
+        if hasattr(self, "model_dump_json"):
+            return self.model_dump_json()
+        return self.json()
 
 
 @attrsx.define
@@ -50,23 +91,24 @@ class OllamaHandlerAsync():
 
     model = attrs.field(default=None)
 
-    kwargs: dict = attrs.field(factory=dict)
+    kwargs: Dict[str, Any] = attrs.field(factory=dict)
 
     def __attrs_post_init__(self):
 
-       self._initialize_ollama()
+        self._initialize_ollama()
 
     def _initialize_ollama(self):
 
         try:
-            from ollama import AsyncClient
+            AsyncClient = importlib.import_module("ollama").AsyncClient
         except ImportError as e:
-            raise ImportError("Failed to import ollama!")
+            raise ImportError("Failed to import ollama!") from e
 
         if self.model is None:
             self.model = AsyncClient(
-                host = self.connection_string, 
-                **self.kwargs)
+                host = self.connection_string,
+                **dict(self.kwargs),
+            )
 
 
     async def chat(self, 
@@ -78,8 +120,10 @@ class OllamaHandlerAsync():
 
         params = {
             "model": model_name or self.model_name,
-            "messages": messages
+            "messages": messages,
         }
+        if self.kwargs:
+            params.update(dict(self.kwargs))
 
 
         response = await self.model.chat(**params)
@@ -95,6 +139,10 @@ class OllamaHandlerAsync():
                 content = response.message.content
             )
         )
+
+    def get_client(self):
+        """Return the underlying Ollama client instance."""
+        return self.model
             
 
     
@@ -112,7 +160,7 @@ class OpenAIHandlerAsync:
 
     model = attrs.field(default=None)
     
-    kwargs: dict = attrs.field(factory=dict)  # Additional passthrough options
+    kwargs: Dict[str, Any] = attrs.field(factory=dict)  # Additional passthrough options
 
     def __attrs_post_init__(self):
         self._initialize_openai()
@@ -120,9 +168,9 @@ class OpenAIHandlerAsync:
     def _initialize_openai(self):
 
         try:
-            import openai
+            openai = importlib.import_module("openai")
         except ImportError as e:
-            raise ImportError("Failed to import openai!")
+            raise ImportError("Failed to import openai!") from e
 
         self.model = openai
 
@@ -141,8 +189,9 @@ class OpenAIHandlerAsync:
         params = {
             "model": model_name or self.model_name,
             "messages": messages,
-            **self.kwargs
         }
+        if self.kwargs:
+            params.update(dict(self.kwargs))
 
         exec_start = datetime.now()
         response = await self.model.ChatCompletion.acreate(**params)
@@ -160,6 +209,10 @@ class OpenAIHandlerAsync:
 
         )
 
+    def get_client(self):
+        """Return the underlying OpenAI client instance."""
+        return self.model
+
 
 @attrsx.define
 class LlmHandler:
@@ -168,7 +221,7 @@ class LlmHandler:
     """
 
     llm_h_type : str = attrs.field()
-    llm_h_params : dict = attrs.field(default = {})
+    llm_h_params: Dict[str, Any] = attrs.field(factory=dict)
     
     llm_h_class = attrs.field(default = None)
     llm_h = attrs.field(default = None)
@@ -187,12 +240,13 @@ class LlmHandler:
     def _initialize_llm_h(self):
 
         if self.llm_h is None:
-            self.llm_h = self.llm_h_class(**self.llm_h_params)
+            params = dict(self.llm_h_params) if self.llm_h_params else {}
+            self.llm_h = self.llm_h_class(**params)
 
     @classmethod
-    def _gen_id(self) -> int:
-        self._id_counter += 1
-        return self._id_counter
+    def _gen_id(cls) -> int:
+        cls._id_counter += 1
+        return cls._id_counter
 
 
     async def chat(self, 
@@ -211,7 +265,7 @@ class LlmHandler:
                 messages = messages,
                 model_name = model_name)
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             response = None
             self.logger.error(f"LLM Handler Error: {e}")
 
@@ -230,5 +284,6 @@ class LlmHandler:
 
         return response
 
-
-
+    def get_backend(self):
+        """Return the initialized LLM backend handler."""
+        return self.llm_h

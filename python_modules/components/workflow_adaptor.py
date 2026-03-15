@@ -12,6 +12,7 @@ import yaml
 import os
 import re
 import json
+import hashlib
 
 import importlib
 import importlib.metadata
@@ -88,7 +89,8 @@ class WorkflowAdaptor:
     adapt_prompt : str = attrs.field(default=None)
     
     prompts_filepath : str = attrs.field(default=None)
-    available_functions : List[LlmFunctionItem] = attrs.field(default=None)
+    available_functions : List[Any] = attrs.field(default=None)
+    llm_function_item_class = attrs.field(default=None)
 
     max_retry : int = attrs.field(default=5)
 
@@ -163,7 +165,7 @@ class WorkflowAdaptor:
 
     def _make_current_state_schema(self, 
         workflow : list, 
-        available_functions : List[LlmFunctionItem], 
+        available_functions : List[Any], 
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,
         func_name : str = None):
@@ -454,6 +456,28 @@ class WorkflowAdaptor:
                         "error_messages" : ["Provided output is a workflow list but no matching step args were found."]})
             function_calls = matched.get("args")
 
+        # Reject null or empty mappings when required fields exist.
+        required_fields = target_schema.get("required", []) if isinstance(target_schema, dict) else []
+        if required_fields:
+            if function_calls is None:
+                return self.workflow_error(
+                    error_type = self.workflow_error_types.ADAPTOR_JSON,
+                    additional_info = {
+                        "step_id" : step_id,
+                        "error_messages" : ["Mapping is null but required fields exist: " + ", ".join(required_fields)]
+                    }
+                )
+            if isinstance(function_calls, dict):
+                missing = [f for f in required_fields if f not in function_calls]
+                if missing:
+                    return self.workflow_error(
+                        error_type = self.workflow_error_types.ADAPTOR_JSON,
+                        additional_info = {
+                            "step_id" : step_id,
+                            "error_messages" : ["Missing required fields: " + ", ".join(missing)]
+                        }
+                    )
+
         try:
             mapping_errors = self._check_complex_mapping(
                 mapping = function_calls, 
@@ -651,7 +675,7 @@ class WorkflowAdaptor:
     def _mod_inputs_for_output_model(self, 
         workflow : List[dict],
         output_model : Type[BaseModel],
-        available_functions : List[LlmFunctionItem],
+        available_functions : List[Any],
         ):
 
         workflow_s = workflow
@@ -664,7 +688,12 @@ class WorkflowAdaptor:
                 "input_schema_json" : output_model.model_json_schema(),
                 "output_schema_json" : output_model.model_json_schema(),
             }
-            available_functions_t += [LlmFunctionItem(
+            item_class = self.llm_function_item_class
+            if item_class is None and available_functions:
+                item_class = type(available_functions[0])
+            if item_class is None:
+                raise ValueError("llm_function_item_class is required to add output_model.")
+            available_functions_t += [item_class(
                 func_id = self._make_uid(d = output_item),
                 **output_item
                 )]
@@ -744,7 +773,7 @@ class WorkflowAdaptor:
 
     async def _adapt_steps(self, 
         workflow : List[dict],
-        available_functions : List[LlmFunctionItem],
+        available_functions : List[Any],
         input_model : Type[BaseModel],
         output_model : Type[BaseModel],
         max_retry : Optional[int]):
@@ -882,7 +911,7 @@ class WorkflowAdaptor:
     async def adapt_workflow(
         self,
         workflow : List[dict] = None,
-        available_functions : List[LlmFunctionItem] = None,
+        available_functions : List[Any] = None,
         input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None,
         max_retry : Optional[int] = None,
@@ -899,7 +928,7 @@ class WorkflowAdaptor:
             available_functions = self.available_functions
 
         if available_functions is None:
-            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
+            raise ValueError("Input available_functions cannot be None!")
 
         if adapted_workflow is None and workflow is None:
             self.logger.warning("No workflow was provided to adapt!")

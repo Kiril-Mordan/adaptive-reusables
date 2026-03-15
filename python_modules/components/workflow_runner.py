@@ -2,37 +2,41 @@
 This module contains methods to run and test llm generated and adapted workflows.
 """
 
+from abc import ABC, abstractmethod
+from copy import deepcopy
+import traceback
+from typing import List, Optional, Dict, Any, Type, Iterable, Callable
+
 import attrs
 import attrsx
-from copy import deepcopy
-
-from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, Type, Iterable
 from pydantic import BaseModel, Field, create_model
-import traceback
-from enum import Enum
 
 
 @attrs.define(kw_only=True)
 class OutputComparerMock(ABC):
+    """Interface for comparing expected and actual outputs."""
 
     @abstractmethod
-    def compare_models(self, expected: BaseModel,
-    actual: BaseModel,
-    ignore_optional: bool = True,
-    max_decimals: int | None = None,
-    ignore_fields: Iterable[str] | None = None,
-    ignore_types: Iterable[type] | None = None,
-    *args,
-    **kwargs) -> list[str]:
+    def compare_models(
+        self,
+        expected: BaseModel,
+        actual: BaseModel,
+        *args,
+        ignore_optional: bool = True,
+        max_decimals: int | None = None,
+        ignore_fields: Iterable[str] | None = None,
+        ignore_types: Iterable[type] | None = None,
+        **kwargs,
+    ) -> list[str]:
 
         """
         Abstract method for comparing two outputs within pydantic models.
         """
 
-        pass
+        raise NotImplementedError
 
 class FunctionCallOutput(BaseModel):
+    """Output container for a single function execution."""
 
     output: Optional[BaseModel] = Field(default=None, description="Output of the function successful run.")
     error: Optional[BaseModel]  = Field(default=None, description="Error during function execution.")
@@ -52,6 +56,8 @@ class WorkflowItem(BaseModel):
 
     
 class TestedWorkflow(BaseModel):
+    """Results for a single workflow run."""
+
     workflow : List[WorkflowItem] = Field(description="Planned and tested workflow.")
     inputs : BaseModel = Field(description="Inputs for test run.")
     outputs : Dict[str, BaseModel] = Field(description="Outputs from test run.")
@@ -62,6 +68,8 @@ class TestedWorkflow(BaseModel):
     }
 
 class TestedWorkflowBatch(BaseModel):
+    """Batch results for multiple workflow runs."""
+
     workflow : List[WorkflowItem] = Field(description="Planned and tested workflow.")
     case_results : List[TestedWorkflow] = Field(description="Per-case workflow run results.")
     error : Optional[BaseModel] = Field(default = None, description="Aggregated error for all cases.")
@@ -72,12 +80,13 @@ class TestedWorkflowBatch(BaseModel):
 
 @attrsx.define(handler_specs = {"output_comparer" : OutputComparerMock})
 class WorkflowRunner:
+    """Runs and validates assembled workflows."""
 
     workflow_error_types = attrs.field()
-    workflow_error = attrs.field()
+    workflow_error: Callable[..., BaseModel] = attrs.field()
 
     
-    available_functions: List[LlmFunctionItem] = attrs.field(
+    available_functions: List[Any] = attrs.field(
         default=None,
         converter=lambda v: None if v is None else deepcopy(v),
     )
@@ -117,18 +126,18 @@ class WorkflowRunner:
         if isinstance(func_args, dict):
             return {k: self._resolve_func_args(outputs, v) for k, v in func_args.items()}
         
-        elif isinstance(func_args, list):
+        if isinstance(func_args, list):
             return [self._resolve_func_args(outputs, v) for v in func_args]
         
-        elif isinstance(func_args, str) and ".output." in func_args:
+        if isinstance(func_args, str) and ".output." in func_args:
             try:
                 step_id, path = func_args.split(".output.", 1)
                 obj = outputs[step_id]
                 for attr in path.split("."):
                     obj = getattr(obj, attr)
                 return obj
-            except Exception as e:
-                raise ValueError(f"Failed to resolve reference '{func_args}': {e}")
+            except (KeyError, AttributeError, IndexError, TypeError, ValueError) as e:
+                raise ValueError(f"Failed to resolve reference '{func_args}': {e}") from e
         
         return func_args
 
@@ -186,9 +195,8 @@ class WorkflowRunner:
         inputs : Type[BaseModel] = None,
         expected_outputs : Type[BaseModel] = None,
         compare_params : dict = None,
-        available_functions : List[LlmFunctionItem] = None,
+        available_functions : List[Any] = None,
         available_callables : Dict[str, callable] = None,
-        input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None) -> TestedWorkflow:
 
         """
@@ -202,7 +210,7 @@ class WorkflowRunner:
             available_callables = self.available_callables
 
         if available_functions is None:
-            raise ValueError("Input available_functions : List[LlmFunctionItem] cannot be None!")
+            raise ValueError("Input available_functions cannot be None!")
 
         if available_callables is None:
             raise ValueError("Input available_callables : Dict[str, callable] cannot be None!")
@@ -233,7 +241,7 @@ class WorkflowRunner:
                 if func_args is None:
                     func_args = {}
 
-            except Exception as e:
+            except (KeyError, IndexError, TypeError, ValueError) as e:
                 error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                 error_type = self.workflow_error_types.INPUTS
                 error = self.workflow_error(
@@ -252,7 +260,7 @@ class WorkflowRunner:
                 try:
                     func_item = [av for av in available_functions \
                         if av.func_id == workflow_item["func_id"]][0]
-                except Exception as e:
+                except (IndexError, KeyError, TypeError, ValueError) as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                     error_type = self.workflow_error_types.PLANNING_HF
                     error = self.workflow_error(
@@ -263,7 +271,7 @@ class WorkflowRunner:
 
                 try:
                     func_inputs = self.json_schema_to_base_model(func_item.input_schema_json)(**func_args)
-                except Exception as e:
+                except (TypeError, ValueError) as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                     error_type = self.workflow_error_types.ADAPTOR_JSON
                     error = self.workflow_error(
@@ -292,7 +300,7 @@ class WorkflowRunner:
             else:
                 try:
                     output = output_model(**func_args)
-                except Exception as e:
+                except (TypeError, ValueError) as e:
                     error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
                     error_type = self.workflow_error_types.OUTPUTS_FAILURE
                     error = self.workflow_error(
@@ -345,9 +353,8 @@ class WorkflowRunner:
         inputs : Type[BaseModel] = None,
         expected_outputs : Type[BaseModel] = None,
         compare_params : dict = None,
-        available_functions : List[LlmFunctionItem] = None,
+        available_functions : List[Any] = None,
         available_callables : Dict[str, callable] = None,
-        input_model : Type[BaseModel] = None,
         output_model : Type[BaseModel] = None) -> TestedWorkflow | TestedWorkflowBatch:
 
         """
@@ -371,7 +378,6 @@ class WorkflowRunner:
                     compare_params = compare_params,
                     available_functions = available_functions,
                     available_callables = available_callables,
-                    input_model = input_model,
                     output_model = output_model
                 )
 
@@ -427,6 +433,5 @@ class WorkflowRunner:
             compare_params = compare_params,
             available_functions = available_functions,
             available_callables = available_callables,
-            input_model = input_model,
             output_model = output_model
         )

@@ -1,0 +1,155 @@
+name: Package-auto-assembler workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: 'Name of the package'
+        required: false
+      ignore_vulnerabilities_check:
+        description: 'Ignore vulnerabilities check'
+        required: false
+  push:
+    branches:
+      - main
+
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 15  # Fetches prev commits
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install jq
+
+      - name: Find Changed Modules
+        id: changed-modules
+        run: |
+          if [ "${{ github.event.inputs.package_name }}" != "" ]; then
+            echo "${{ github.event.inputs.package_name }}" > changed_files
+          else
+            chmod +x .github/tools/find_and_process_changed_files.sh
+            chmod +x .github/tools/get_paa_change_dirs.sh
+            .github/tools/find_and_process_changed_files.sh $(.github/tools/get_paa_change_dirs.sh) '' ''
+          fi
+
+          if [ -s changed_files ]; then
+              echo "::set-output name=files::$(cat changed_files)"
+          fi
+
+      - name: Install Draw.io Desktop and Dependencies
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget xvfb libnotify4 libxml2-utils libsecret-1-0
+          wget https://github.com/jgraph/drawio-desktop/releases/download/v24.6.4/drawio-amd64-24.6.4.deb
+          sudo dpkg -i drawio-amd64-24.6.4.deb || sudo apt-get install -f -y
+
+      - name: Set up Python 3.10
+        if: steps.changed-modules.outputs.files != ''
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies with uv
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          pip install uv
+          uv venv .venv
+          uv pip install -r .paa/requirements_dev.txt
+
+      - name: Export drawio files to png files
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          uv run paa convert-drawio-to-png --label-name ${{ steps.changed-modules.outputs.files }}
+
+      - name: Pull latest changes from the remote repository
+        if: steps.changed-modules.outputs.files != ''
+        run: git pull origin main
+
+      - name: Assemble and build package
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+
+          echo "Assembling for:"
+          echo ${{ steps.changed-modules.outputs.files }}
+          # echo "Test-installing paa ..."
+          # paa test-install package-auto-assembler
+          echo "Assembling..."
+          if [ "${{ github.event.inputs.ignore_vulnerabilities_check }}" != "" ]; then
+            uv run paa make-package ${{ steps.changed-modules.outputs.files }} --ignore-vulnerabilities-check
+          else
+            uv run paa make-package ${{ steps.changed-modules.outputs.files }}
+            
+          ls -la
+
+      - name: Publish to PyPI
+        if: steps.changed-modules.outputs.files != ''
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: |
+          ls -la
+          uv run python -m twine upload dist/*
+
+      - name: Save module requirements
+        if: steps.changed-modules.outputs.files != ''
+        run: uv run paa extract-module-requirements "${{ steps.changed-modules.outputs.files }}" > ".paa/requirements/requirements_${{ steps.changed-modules.outputs.files }}.txt"
+
+      - name: Update README.md
+        run: |
+          chmod +x .github/tools/update_README.sh
+          .github/tools/update_README.sh
+
+      - name: Commit changes
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          set -x
+   
+          PACKAGE_VERSION=$(uv run paa extract-tracking-version "${{ steps.changed-modules.outputs.files }}")
+          if [ -z "${PACKAGE_VERSION}" ]; then
+            echo "Failed to get version"
+            exit 1
+          fi
+
+          LABEL_NAME=${{ steps.changed-modules.outputs.files }}
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git pull origin HEAD:main
+
+          git add .paa README.md
+
+          # Check if there are any changes in the working directory
+          if [ -n "$(git status --porcelain)" ]; then
+            COMMIT_MESSAGE="Update paa tracking files"
+            TAG_NAME="v${PACKAGE_VERSION}_${LABEL_NAME}"
+            TAG_MESSAGE="${LABEL_NAME}==${PACKAGE_VERSION}"
+
+            git commit -m "${COMMIT_MESSAGE}"
+            git tag -a "${TAG_NAME}" -m "${TAG_MESSAGE}"
+            git push origin HEAD:main
+            git push origin "${TAG_NAME}"
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Prepare site for gh-pages
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          LABEL_NAME=${{ steps.changed-modules.outputs.files }}
+          echo "LABEL_NAME=${LABEL_NAME}" >> $GITHUB_ENV
+          mv "${LABEL_NAME}_temp_mkdocs" temp_project
+
+      - name: Deploy to GitHub Pages
+        if: steps.changed-modules.outputs.files != ''
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./temp_project/site
+          destination_dir: "${{ env.LABEL_NAME }}"

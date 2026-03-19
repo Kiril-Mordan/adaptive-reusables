@@ -1,0 +1,5 @@
+[pycodestyle]
+max-line-length = 150
+
+[MESSAGES CONTROL]
+disable=C0103, W1203, R0913, C0303, W0611, R0914, R0902, E1101, C0114

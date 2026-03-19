@@ -1,0 +1,148 @@
+name: Tests
+
+on:
+  pull_request:
+
+
+jobs:
+
+  update-requirements:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-files: ${{ steps.changed-modules.outputs.files }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 15  # Fetches prev commits
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install jq
+
+      - name: Find Changed Modules
+        id: changed-modules
+        run: |
+          if [ "${{ github.event.inputs.package_name }}" != "" ]; then
+            echo "${{ github.event.inputs.package_name }}" > changed_files
+          else
+            chmod +x .github/tools/find_and_process_changed_files.sh
+            chmod +x .github/tools/get_paa_change_dirs.sh
+            .github/tools/find_and_process_changed_files.sh $(.github/tools/get_paa_change_dirs.sh) '' ''
+          fi
+
+          if [ -s changed_files ]; then
+              echo "::set-output name=files::$(cat changed_files)"
+          fi
+
+      - name: Install dependencies
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          pip install uv
+          uv venv .venv
+          uv pip install -r .paa/requirements_dev.txt
+
+      - name: Update requirements
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          chmod +x .github/tools/update_tox_requirements.sh
+          uv run paa extract-module-requirements "${{ steps.changed-modules.outputs.files }}" > ".paa/requirements/requirements_${{ steps.changed-modules.outputs.files }}.txt"
+          .github/tools/update_tox_requirements.sh "${{ steps.changed-modules.outputs.files }}"
+          cat .paa/requirements/requirements_tox.txt 
+
+      - name: Check requirements for vulnerabilities
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          uv run paa check-vulnerabilities "${{ steps.changed-modules.outputs.files }}"
+
+
+      - name: Check module licenses
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          uv run paa check-licenses "${{ steps.changed-modules.outputs.files }}"
+
+      - name: Prepare temp tests name
+        if: steps.changed-modules.outputs.files != ''
+        run: |
+          TESTS_DIR=$(yq -r '.tests_dir' .paa.config)
+          if [ -z "$TESTS_DIR" ] || [ "$TESTS_DIR" = "null" ]; then
+            TESTS_DIR="tests"
+          fi
+          mkdir tempdir
+          echo "$TESTS_DIR" > tempdir/temp_test_name.txt
+
+      - name: Upload updated requirements
+        if: steps.changed-modules.outputs.files != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-requirements
+          path: .paa/requirements/requirements_tox.txt
+
+      - name: Upload tests-name
+        if: steps.changed-modules.outputs.files != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-name
+          path: tempdir/temp_test_name.txt
+
+  test:
+    needs: update-requirements
+    if: needs.update-requirements.outputs.changed-files != ''
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download updated requirements
+        uses: actions/download-artifact@v4
+        with:
+          name: updated-requirements
+          path: .paa/requirements/
+
+      - name: Download tests-name
+        uses: actions/download-artifact@v4
+        with:
+          name: tests-name
+          path: tempdir/
+
+      - name: Install dependencies
+        run: | 
+          pip install uv
+          uv venv .venv
+          uv pip install -r .paa/requirements/requirements_tox.txt
+
+      - name: Test with tox
+        run: |
+          TESTS_DIR=$(cat tempdir/temp_test_name.txt)
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [ -d "$TESTS_DIR/${{ needs.update-requirements.outputs.changed-files }}" ]; then
+              uv run tox -- "$TESTS_DIR/${{ needs.update-requirements.outputs.changed-files }}"
+            else
+              echo "No tests for module."
+            fi
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            if [ -d "$TESTS_DIR/${{ needs.update-requirements.outputs.changed-files }}" ]; then
+              uv run tox -- "$TESTS_DIR/${{ needs.update-requirements.outputs.changed-files }}"
+            else
+              echo "No tests for module."
+            fi
+          fi
+        shell: bash
+
+      - name: Run pylint checks
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            uv run paa run-pylint-tests --label-name "${{ needs.update-requirements.outputs.changed-files }}"
+          fi
+        shell: bash

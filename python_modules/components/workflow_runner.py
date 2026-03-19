@@ -79,7 +79,7 @@ class TestedWorkflowBatch(BaseModel):
     }
 
 @attrsx.define(handler_specs = {"output_comparer" : OutputComparerMock})
-class WorkflowRunner:
+class WorkflowRunner:  # pylint: disable=not-callable
     """Runs and validates assembled workflows."""
 
     workflow_error_types = attrs.field()

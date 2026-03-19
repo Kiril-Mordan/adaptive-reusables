@@ -3,21 +3,19 @@ This module contains a set of tools to get initial llm-generated
 workflow for described task based on provided tools.
 """
 
-import attrs
-import attrsx
-
+from abc import ABC, abstractmethod
 from copy import deepcopy
-import yaml
-import os
-import json
-
 import importlib
 import importlib.metadata
 import importlib.resources as pkg_resources
-
-from abc import ABC, abstractmethod
+import json
+import os
 from typing import List, Optional, Dict, Any, Type
+
+import attrs
+import attrsx
 from pydantic import BaseModel, Field
+import yaml
 
 
 class WorkflowPlannerResponse(BaseModel):
@@ -97,7 +95,7 @@ class WorkflowPlanner:
                 'workflow_planner.yml') as path:
                     prompts_filepath = path
 
-            with open(prompts_filepath, 'r') as f:
+            with open(prompts_filepath, 'r', encoding="utf-8") as f:
                 wp_prompts = yaml.safe_load(f)
 
         if system_message: 

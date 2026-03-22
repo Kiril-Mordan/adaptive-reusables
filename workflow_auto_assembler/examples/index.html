@@ -1,0 +1,2682 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../reset_logic/">
+      
+      
+        <link rel="next" href="../quick_start/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.30">
+    
+    
+      
+        <title>Examples - Workflow auto assembler</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.3cba04c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../css/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#example-functions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Workflow auto assembler" class="md-header__button md-logo" aria-label="Workflow auto assembler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Workflow auto assembler
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Examples
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1Z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="green" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Kiril-Mordan/adaptive-reusables" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    adaptive-reusables
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Workflow auto assembler" class="md-nav__button md-logo" aria-label="Workflow auto assembler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    Workflow auto assembler
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Kiril-Mordan/adaptive-reusables" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    adaptive-reusables
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Intro
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Components
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Components
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../runner/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Runner
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adaptor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adaptor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../planner/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Planner
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../init_check/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Init check
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core_ideas/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Core ideas
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reset_logic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reset logic
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#example-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example functions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example tasks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-translate-to-french" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Translate to French
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-summarize-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Summarize Document
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-sentiment-keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Sentiment + Keywords
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-convert-units-sms" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Convert Units + SMS
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-weather-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Weather Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-db-query-translate-upload" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. DB Query + Translate + Upload
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-transcribe-summarize" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Transcribe + Summarize
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-weather-convert-pdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Weather + Convert + PDF
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-web-search-rewrite" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Web Search + Rewrite
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-image-objects-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Image Objects + Email
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-distance-currency-sms" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Distance + Currency + SMS
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-summarize-file-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. Summarize File + Email
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-db-stock-order-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. DB Stock + Order + Email
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-distance-plot" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. Distance Plot
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-web-sentiment-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. Web Sentiment Summary
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-weather-audio-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. Weather + Audio + Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-db-distance-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      17. DB + Distance + Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-call-summary-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      18. Call Summary + Order
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#19-web-summary-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      19. Web Summary + Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#20-full-pipeline-showcase" class="md-nav__link">
+    <span class="md-ellipsis">
+      20. Full Pipeline Showcase
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#21-db-summary-notify" class="md-nav__link">
+    <span class="md-ellipsis">
+      21. DB Summary + Notify
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-ocr-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      22. OCR Image
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-embedding-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      23. Embedding + Index
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-contract-compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      24. Contract Compliance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-crypto-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      25. Crypto Transfer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick_start/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quick start
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Research notes
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Research notes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01_benchmark_25_example_functions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    01 benchmark 25 example functions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-notes/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Release notes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#example-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example functions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example tasks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-translate-to-french" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Translate to French
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-summarize-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Summarize Document
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-sentiment-keywords" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Sentiment + Keywords
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-convert-units-sms" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Convert Units + SMS
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-weather-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Weather Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-db-query-translate-upload" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. DB Query + Translate + Upload
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-transcribe-summarize" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Transcribe + Summarize
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-weather-convert-pdf" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Weather + Convert + PDF
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-web-search-rewrite" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Web Search + Rewrite
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-image-objects-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Image Objects + Email
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-distance-currency-sms" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Distance + Currency + SMS
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-summarize-file-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. Summarize File + Email
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-db-stock-order-email" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. DB Stock + Order + Email
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-distance-plot" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. Distance Plot
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-web-sentiment-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. Web Sentiment Summary
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-weather-audio-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. Weather + Audio + Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-db-distance-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      17. DB + Distance + Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-call-summary-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      18. Call Summary + Order
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#19-web-summary-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      19. Web Summary + Report
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#20-full-pipeline-showcase" class="md-nav__link">
+    <span class="md-ellipsis">
+      20. Full Pipeline Showcase
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#21-db-summary-notify" class="md-nav__link">
+    <span class="md-ellipsis">
+      21. DB Summary + Notify
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-ocr-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      22. OCR Image
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-embedding-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      23. Embedding + Index
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-contract-compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      24. Contract Compliance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-crypto-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      25. Crypto Transfer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>Examples</h1>
+
+<p>This notebook collects example tool catalogs and example workflow tasks used to demonstrate <code>workflow_auto_assembler</code> in action.</p>
+<p>The examples are intentionally synthetic. Their purpose is to show how WAA assembles typed linear workflows from available tool schemas, not to claim broad real-world agent capability.</p>
+<h3 id="example-functions">Example functions</h3>
+<p>A set of 24 simple mock functions was defined alongside explicit input and output models. Together they form the available tool catalog from which WAA assembles workflows.</p>
+<details>
+
+
+<pre><code class="language-python">class TranslateTextInput(BaseModel):
+    text: str = Field(..., description=&quot;Text to translate.&quot;)
+    target_language: str = Field(..., description=&quot;Target language code.&quot;)
+
+class TranslateTextOutput(BaseModel):
+    translated_text: str = Field(..., description=&quot;Text translated into the target language.&quot;)
+
+def translate_text(inputs: TranslateTextInput) -&gt; TranslateTextOutput:
+    &quot;&quot;&quot;Translate text to another language.&quot;&quot;&quot;
+    return TranslateTextOutput(
+        translated_text=f&quot;Translated({inputs.text}) → {inputs.target_language}&quot;
+    )
+</code></pre>
+
+
+
+<pre><code class="language-python">class SummarizeTextInput(BaseModel):
+    content: str = Field(..., description=&quot;Text to summarize.&quot;)
+
+class SummarizeTextOutput(BaseModel):
+    summary: str = Field(..., description=&quot;Short summarized version of the content.&quot;)
+
+def summarize_text(inputs: SummarizeTextInput) -&gt; SummarizeTextOutput:
+    &quot;&quot;&quot;Summarize long content.&quot;&quot;&quot;
+    return SummarizeTextOutput(summary=&quot;Short summary...&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class DetectSentimentInput(BaseModel):
+    text: str
+
+class DetectSentimentOutput(BaseModel):
+    sentiment: str
+    score: float
+
+def detect_sentiment(inputs: DetectSentimentInput) -&gt; DetectSentimentOutput:
+    &quot;&quot;&quot;Detect sentiment of given text.&quot;&quot;&quot;
+    return DetectSentimentOutput(sentiment=&quot;positive&quot;, score=0.9)
+</code></pre>
+
+
+
+<pre><code class="language-python">class ExtractKeywordsInput(BaseModel):
+    text: str
+
+class ExtractKeywordsOutput(BaseModel):
+    keywords: List[str]
+
+def extract_keywords(inputs: ExtractKeywordsInput) -&gt; ExtractKeywordsOutput:
+    &quot;&quot;&quot;Extract keywords.&quot;&quot;&quot;
+    return ExtractKeywordsOutput(keywords=[&quot;keyword1&quot;, &quot;keyword2&quot;])
+</code></pre>
+
+
+
+<pre><code class="language-python">class ConvertUnitsInput(BaseModel):
+    value: float
+    from_unit: str
+    to_unit: str
+
+class ConvertUnitsOutput(BaseModel):
+    converted_value: float
+
+def convert_units(inputs: ConvertUnitsInput) -&gt; ConvertUnitsOutput:
+    &quot;&quot;&quot;Convert measurement units.&quot;&quot;&quot;
+    return ConvertUnitsOutput(converted_value=inputs.value * 1.3)
+</code></pre>
+
+
+
+<pre><code class="language-python">class CalculateDistanceInput(BaseModel):
+    lat1: float
+    lon1: float
+    lat2: float
+    lon2: float
+
+class CalculateDistanceOutput(BaseModel):
+    distance_km: float
+
+def calculate_distance(inputs: CalculateDistanceInput) -&gt; CalculateDistanceOutput:
+    &quot;&quot;&quot;Calculate distance.&quot;&quot;&quot;
+    return CalculateDistanceOutput(distance_km=42.0)
+</code></pre>
+
+
+
+<pre><code class="language-python">class GeneratePlotInput(BaseModel):
+    data: List[float]
+    title: str
+
+class GeneratePlotOutput(BaseModel):
+    image_path: str
+
+def generate_plot(inputs: GeneratePlotInput) -&gt; GeneratePlotOutput:
+    &quot;&quot;&quot;Generate plot.&quot;&quot;&quot;
+    return GeneratePlotOutput(image_path=&quot;/tmp/plot.png&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class CurrencyExchangeInput(BaseModel):
+    amount: float
+    from_currency: str
+    to_currency: str
+
+class CurrencyExchangeOutput(BaseModel):
+    converted_amount: float
+
+def currency_exchange(inputs: CurrencyExchangeInput) -&gt; CurrencyExchangeOutput:
+    &quot;&quot;&quot;Convert currencies.&quot;&quot;&quot;
+    return CurrencyExchangeOutput(converted_amount=inputs.amount * 1.1)
+</code></pre>
+
+
+
+<pre><code class="language-python">class StoreFileInput(BaseModel):
+    filename: str
+    content: str
+
+class StoreFileOutput(BaseModel):
+    storage_path: str
+
+def store_file(inputs: StoreFileInput) -&gt; StoreFileOutput:
+    &quot;&quot;&quot;Store file.&quot;&quot;&quot;
+    return StoreFileOutput(storage_path=f&quot;/tmp/{inputs.filename}&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class LoadFileInput(BaseModel):
+    path: str
+
+class LoadFileOutput(BaseModel):
+    content: str
+
+def load_file(inputs: LoadFileInput) -&gt; LoadFileOutput:
+    &quot;&quot;&quot;Load file from storage.&quot;&quot;&quot;
+    return LoadFileOutput(content=&quot;Loaded file contents...&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class SendSMSInput(BaseModel):
+    phone: str
+    message: str
+
+class SendSMSOutput(BaseModel):
+    success: bool
+
+def send_sms(inputs: SendSMSInput) -&gt; SendSMSOutput:
+    &quot;&quot;&quot;Send SMS.&quot;&quot;&quot;
+    return SendSMSOutput(success=True)
+</code></pre>
+
+
+
+<pre><code class="language-python">class DetectObjectsInput(BaseModel):
+    image_path: str
+
+class DetectObjectsOutput(BaseModel):
+    objects: List[str]
+
+def detect_objects(inputs: DetectObjectsInput) -&gt; DetectObjectsOutput:
+    &quot;&quot;&quot;Detect objects in image.&quot;&quot;&quot;
+    return DetectObjectsOutput(objects=[&quot;cat&quot;, &quot;chair&quot;])
+</code></pre>
+
+
+
+<pre><code class="language-python">class TranscribeAudioInput(BaseModel):
+    audio_path: str
+
+class TranscribeAudioOutput(BaseModel):
+    text: str
+
+def transcribe_audio(inputs: TranscribeAudioInput) -&gt; TranscribeAudioOutput:
+    &quot;&quot;&quot;Transcribe audio file.&quot;&quot;&quot;
+    return TranscribeAudioOutput(text=&quot;Transcribed text&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class GenerateReportInput(BaseModel):
+    title: str
+    body: str
+
+class GenerateReportOutput(BaseModel):
+    pdf_path: str
+
+def generate_report(inputs: GenerateReportInput) -&gt; GenerateReportOutput:
+    &quot;&quot;&quot;Generate report.&quot;&quot;&quot;
+    return GenerateReportOutput(pdf_path=&quot;/tmp/report.pdf&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class LookupCoordinatesInput(BaseModel):
+    city: str
+
+class LookupCoordinatesOutput(BaseModel):
+    lat: float
+    lon: float
+
+def lookup_coordinates(inputs: LookupCoordinatesInput) -&gt; LookupCoordinatesOutput:
+    &quot;&quot;&quot;Lookup coordinates.&quot;&quot;&quot;
+    return LookupCoordinatesOutput(lat=10.0, lon=20.0)
+</code></pre>
+
+
+
+<pre><code class="language-python">class CheckAvailabilityInput(BaseModel):
+    item_id: str
+    location: str
+
+class CheckAvailabilityOutput(BaseModel):
+    available: bool
+    stock: int
+
+def check_availability(inputs: CheckAvailabilityInput) -&gt; CheckAvailabilityOutput:
+    &quot;&quot;&quot;Check stock.&quot;&quot;&quot;
+    return CheckAvailabilityOutput(available=True, stock=5)
+</code></pre>
+
+
+
+<pre><code class="language-python">class CreateOrderInput(BaseModel):
+    item_id: str
+    quantity: int
+
+class CreateOrderOutput(BaseModel):
+    order_id: str
+    status: str
+
+def create_order(inputs: CreateOrderInput) -&gt; CreateOrderOutput:
+    &quot;&quot;&quot;Create order.&quot;&quot;&quot;
+    return CreateOrderOutput(order_id=&quot;ORD-001&quot;, status=&quot;created&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class CheckOrderStatusInput(BaseModel):
+    order_id: str
+
+class CheckOrderStatusOutput(BaseModel):
+    status: str
+
+def check_order_status(inputs: CheckOrderStatusInput) -&gt; CheckOrderStatusOutput:
+    &quot;&quot;&quot;Check order status.&quot;&quot;&quot;
+    return CheckOrderStatusOutput(status=&quot;in progress&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class UploadImageInput(BaseModel):
+    image_path: str
+    label: str
+
+class UploadImageOutput(BaseModel):
+    success: bool
+    url: str
+
+def upload_image(inputs: UploadImageInput) -&gt; UploadImageOutput:
+    &quot;&quot;&quot;Upload image.&quot;&quot;&quot;
+    return UploadImageOutput(success=True, url=&quot;http://img.local&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class RewriteTextInput(BaseModel):
+    text: str
+    tone: str
+
+class RewriteTextOutput(BaseModel):
+    rewritten: str
+
+def rewrite_text(inputs: RewriteTextInput) -&gt; RewriteTextOutput:
+    &quot;&quot;&quot;Rewrite text in specified tone.&quot;&quot;&quot;
+    return RewriteTextOutput(rewritten=f&quot;{inputs.tone} version of {inputs.text}&quot;)
+</code></pre>
+
+
+
+<pre><code class="language-python">class GetWeatherInput(BaseModel):
+    city: str = Field(..., description=&quot;Name of the city for which weather to be extracted.&quot;)
+
+class GetWeatherOutput(BaseModel):
+    condition: str = Field(..., description=&quot;Weather condition in the requested city.&quot;)
+    temperature: float = Field(..., description=&quot;Termperature in C in the requested city.&quot;)
+    humidity: float = Field(None, description=&quot;Name of the city for which weather to be extracted.&quot;)
+
+def get_weather(inputs: GetWeatherInput) -&gt; GetWeatherOutput:
+    &quot;&quot;&quot;Get the current weather for a city from weather forcast api.&quot;&quot;&quot;
+    return GetWeatherOutput(
+        condition = &quot;Sunny&quot;,
+        temperature = 20,
+        humidity = 0.6
+    )
+</code></pre>
+
+
+
+<pre><code class="language-python">class EmailInformationPoint(BaseModel):
+    title: str = Field(None, description=&quot;Few word description of the information.&quot;)
+    content: str = Field(..., description=&quot;Content of the information.&quot;)
+
+class SendReportEmailInput(BaseModel):
+    city: str = Field(..., description=&quot;Name of the city where report will be send.&quot;)
+    information: list[EmailInformationPoint]
+
+class SendReportEmailOutput(BaseModel):
+    email_sent: bool = Field(..., description=&quot;Conformation that email was send successfully.&quot;)
+    message: str = Field(None, description=&quot;Optional comments from the process.&quot;)
+
+def send_report_email(inputs: SendReportEmailInput) -&gt; SendReportEmailOutput:
+    &quot;&quot;&quot;Sends a report email with given information points to a city.&quot;&quot;&quot;
+    return SendReportEmailOutput(
+        email_sent = True,
+        message = &quot;Email sent to city of your choosing!&quot;
+    )
+</code></pre>
+
+
+
+<pre><code class="language-python">class QueryDatabaseInput(BaseModel):
+    topic: str = Field(..., description=&quot;Topic of a requested piece of information.&quot;)
+    location: str = Field(None, description=&quot;Filter for location name.&quot;)
+    uid: str = Field(None, description=&quot;Filter for unique indentifier of the database item.&quot;)
+
+class QueryDatabaseOutput(BaseModel):
+    info: str = Field(..., description=&quot;Content of the information.&quot;)
+    uid: str = Field(None, description=&quot;Unique indentifier of the database item.&quot;)
+
+def query_database(inputs : QueryDatabaseInput) -&gt; QueryDatabaseOutput:
+    &quot;&quot;&quot;Get information from the database with provided filters.&quot;&quot;&quot;
+    return QueryDatabaseOutput(
+        info = &quot;Content extracted from the database for your query is ...&quot;,
+        uid = &quot;0000&quot;
+    )
+</code></pre>
+
+
+
+<pre><code class="language-python">class QueryWebInput(BaseModel):
+    search_input: str = Field(..., description=&quot;Topic to be searched on the web.&quot;)
+
+
+class QueryWebOutput(BaseModel):
+    search_results: List[str] = Field(..., description=&quot;List relevant info from search results.&quot;)
+
+
+def query_web(inputs : QueryWebInput) -&gt; QueryWebOutput:
+    &quot;&quot;&quot;Get information from the internet for provided query.&quot;&quot;&quot;
+    return QueryWebOutput(
+        search_results = [&quot;Relevant content found in first search result is ...&quot;],
+    )
+
+</code></pre>
+
+
+</details>
+
+<h3 id="example-tasks">Example tasks</h3>
+<p>To test schema-first planning, 25 workflow tasks were defined through a description plus target input and output models. These tasks were used during development and can serve as templates for creating new benchmark or demo tasks.</p>
+<h4 id="1-translate-to-french">1. Translate to French</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task1Input(BaseModel):
+    text: str = Field(..., description=&quot;Text to translate.&quot;)
+    target_language: str = Field(..., description=&quot;Target language code (e.g., 'fr').&quot;)
+
+class Task1Output(BaseModel):
+    translated_text: str = Field(..., description=&quot;Translated text.&quot;)
+
+task_specs['task_1'] = {
+        &quot;description&quot;: &quot;Translate a sentence into French.&quot;,
+        &quot;input_model&quot;: Task1Input,
+        &quot;output_model&quot;: Task1Output,
+}
+
+t1_inputs = [
+    Task1Input(text=t, target_language=lang)
+    for t, lang in [
+        (&quot;Hello&quot;, &quot;fr&quot;), (&quot;Good morning&quot;, &quot;es&quot;), (&quot;How are you?&quot;, &quot;de&quot;),
+        (&quot;See you soon&quot;, &quot;it&quot;), (&quot;Thank you&quot;, &quot;pl&quot;), (&quot;Where is the station?&quot;, &quot;ja&quot;),
+        (&quot;Nice to meet you&quot;, &quot;ko&quot;), (&quot;I need help&quot;, &quot;pt&quot;), (&quot;What time is it?&quot;, &quot;ar&quot;),
+        (&quot;Good night&quot;, &quot;nl&quot;),
+    ]
+]
+t1_outputs = [
+    Task1Output(translated_text=f&quot;Translated({i.text}) → {i.target_language}&quot;) for i in t1_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="2-summarize-document">2. Summarize Document</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task2Input(BaseModel):
+    content: str = Field(..., description=&quot;Text to summarize.&quot;)
+
+class Task2Output(BaseModel):
+    summary: str = Field(..., description=&quot;Short summary of content.&quot;)
+
+task_specs['task_2'] = {
+        &quot;description&quot;: &quot;Summarize a document and return the summary.&quot;,
+        &quot;input_model&quot;: Task2Input,
+        &quot;output_model&quot;: Task2Output,
+}
+
+t2_inputs = [Task2Input(content=f&quot;Long text example #{i} ...&quot;) for i in range(1, 11)]
+t2_outputs = [Task2Output(summary=&quot;Short summary...&quot;) for _ in t2_inputs]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="3-sentiment-keywords">3. Sentiment + Keywords</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task3Input(BaseModel):
+    text: str = Field(..., description=&quot;Text to analyze.&quot;)
+
+class Task3Output(BaseModel):
+    sentiment: str = Field(..., description=&quot;Detected sentiment label.&quot;)
+    score: float = Field(..., description=&quot;Confidence score 0-1.&quot;)
+    keywords: List[str] = Field(..., description=&quot;Extracted keywords.&quot;)
+
+task_specs['task_3'] = {
+        &quot;description&quot;: &quot;Detect sentiment of text and extract keywords.&quot;,
+        &quot;input_model&quot;: Task3Input,
+        &quot;output_model&quot;: Task3Output,
+    }
+
+
+t3_inputs = [
+    Task3Input(text=txt) for txt in [
+        &quot;I love this product!&quot;, &quot;This is terrible.&quot;, &quot;It's okay, I guess.&quot;,
+        &quot;Absolutely fantastic!&quot;, &quot;Very disappointing.&quot;, &quot;Mixed feelings overall.&quot;,
+        &quot;Exceeded expectations!&quot;, &quot;Not worth the price.&quot;, &quot;Pretty decent&quot;, &quot;Amazing value!&quot;
+    ]
+]
+t3_outputs = [
+    Task3Output(sentiment=&quot;positive&quot;, score=0.9, keywords=[&quot;keyword1&quot;, &quot;keyword2&quot;]) for _ in t3_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="4-convert-units-sms">4. Convert Units + SMS</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task4Input(BaseModel):
+    value: float = Field(..., description=&quot;Numeric value to convert.&quot;)
+    from_unit: str = Field(..., description=&quot;Source unit (e.g., 'C').&quot;)
+    to_unit: str = Field(..., description=&quot;Target unit (e.g., 'F').&quot;)
+    phone: str = Field(..., description=&quot;Phone number to receive SMS.&quot;)
+
+class Task4Output(BaseModel):
+    converted_value: float = Field(..., description=&quot;Converted numeric value.&quot;)
+    sms_sent: bool = Field(..., description=&quot;Whether SMS was sent.&quot;)
+
+task_specs['task_4'] = {
+        &quot;description&quot;: &quot;Convert temperature units and send SMS with results.&quot;,
+        &quot;input_model&quot;: Task4Input,
+        &quot;output_model&quot;: Task4Output,
+    }
+
+t4_inputs = [
+    Task4Input(value=v, from_unit=&quot;C&quot;, to_unit=&quot;F&quot;, phone=f&quot;+15550000{i:02d}&quot;)
+    for i, v in enumerate([0, 5, 10, 12.5, 15, 18, 20, 25, 30, 37], start=1)
+]
+# convert_units mock = value * 1.3 ; send_sms mock = True
+t4_outputs = [
+    Task4Output(converted_value=round(i.value * 1.3, 6), sms_sent=True) for i in t4_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="5-weather-report">5. Weather Report</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task5Input(BaseModel):
+    city: str = Field(..., description=&quot;City name.&quot;)
+    report_title: Optional[str] = Field(&quot;City Weather Report&quot;, description=&quot;Title for the report.&quot;)
+
+class Task5Output(BaseModel):
+    report_pdf_path: str = Field(..., description=&quot;Path to generated report PDF.&quot;)
+    weather_condition: str = Field(..., description=&quot;Weather condition.&quot;)
+    temperature_c: float = Field(..., description=&quot;Temperature in Celsius.&quot;)
+    lat: float = Field(..., description=&quot;Latitude of city.&quot;)
+    lon: float = Field(..., description=&quot;Longitude of city.&quot;)
+
+task_specs['task_5'] = {
+        &quot;description&quot;: &quot;Lookup city coordinates, get weather, summarize into a report.&quot;,
+        &quot;input_model&quot;: Task5Input,
+        &quot;output_model&quot;: Task5Output,
+    }
+
+t5_inputs = [
+    Task5Input(city=c, report_title=f&quot;{c} Weather Report&quot;)
+    for c in [&quot;Paris&quot;, &quot;Berlin&quot;, &quot;Warsaw&quot;, &quot;Tokyo&quot;, &quot;Sydney&quot;, &quot;New York&quot;, &quot;London&quot;, &quot;Toronto&quot;, &quot;Lisbon&quot;, &quot;Rome&quot;]
+]
+# get_weather mock =&gt; Sunny, 20.0 ; lookup_coordinates mock =&gt; 10.0, 20.0 ; report path fixed
+t5_outputs = [
+    Task5Output(
+        report_pdf_path=&quot;/tmp/report.pdf&quot;,
+        weather_condition=&quot;Sunny&quot;,
+        temperature_c=20.0,
+        lat=10.0,
+        lon=20.0,
+    ) for _ in t5_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="6-db-query-translate-upload">6. DB Query + Translate + Upload</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task6Input(BaseModel):
+    topic: str = Field(..., description=&quot;Database topic to query.&quot;)
+    target_language: str = Field(..., description=&quot;Language code for translation.&quot;)
+    image_path: str = Field(..., description=&quot;Path of related image to upload.&quot;)
+    label: str = Field(..., description=&quot;Label for the image upload.&quot;)
+
+class Task6Output(BaseModel):
+    translated_info: str = Field(..., description=&quot;Translated DB info.&quot;)
+    uid: str = Field(..., description=&quot;Database item UID.&quot;)
+    image_url: str = Field(..., description=&quot;URL of uploaded image.&quot;)
+
+
+task_specs['task_6'] = {
+        &quot;description&quot;: &quot;Query database, translate results, upload image of related doc.&quot;,
+        &quot;input_model&quot;: Task6Input,
+        &quot;output_model&quot;: Task6Output,
+    }
+
+t6_inputs = [
+    Task6Input(topic=topic, target_language=lang, image_path=f&quot;/images/{i}.png&quot;, label=f&quot;doc-{i}&quot;)
+    for i, (topic, lang) in enumerate([
+        (&quot;birds&quot;, &quot;fr&quot;), (&quot;finance&quot;, &quot;es&quot;), (&quot;weather&quot;, &quot;de&quot;), (&quot;transport&quot;, &quot;it&quot;),
+        (&quot;education&quot;, &quot;pl&quot;), (&quot;sports&quot;, &quot;ja&quot;), (&quot;technology&quot;, &quot;ko&quot;), (&quot;health&quot;, &quot;pt&quot;),
+        (&quot;energy&quot;, &quot;ar&quot;), (&quot;tourism&quot;, &quot;nl&quot;)
+    ], start=1)
+]
+# query_database =&gt; uid=&quot;0000&quot; ; translate_text =&gt; &quot;Translated(...)&quot; (but we expose final as paraphrase)
+# upload_image =&gt; url fixed
+t6_outputs = [
+    Task6Output(
+        translated_info=f&quot;Translated(Content extracted from the database for your query is ...) → {lang}&quot;,
+        uid=&quot;0000&quot;,
+        image_url=&quot;http://img.local&quot;,
+    ) for _, (_, lang) in enumerate([
+        (&quot;birds&quot;, &quot;fr&quot;), (&quot;finance&quot;, &quot;es&quot;), (&quot;weather&quot;, &quot;de&quot;), (&quot;transport&quot;, &quot;it&quot;),
+        (&quot;education&quot;, &quot;pl&quot;), (&quot;sports&quot;, &quot;ja&quot;), (&quot;technology&quot;, &quot;ko&quot;), (&quot;health&quot;, &quot;pt&quot;),
+        (&quot;energy&quot;, &quot;ar&quot;), (&quot;tourism&quot;, &quot;nl&quot;)
+    ], start=1)
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="7-transcribe-summarize">7. Transcribe + Summarize</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task7Input(BaseModel):
+    audio_path: str = Field(..., description=&quot;Path to meeting audio file.&quot;)
+
+class Task7Output(BaseModel):
+    transcript: str = Field(..., description=&quot;Transcribed text.&quot;)
+    summary: str = Field(..., description=&quot;Summary of transcript.&quot;)
+    sentiment: str = Field(..., description=&quot;Overall sentiment label.&quot;)
+    score: float = Field(..., description=&quot;Confidence score 0-1.&quot;)
+
+task_specs['task_7'] = {
+        &quot;description&quot;: &quot;Transcribe meeting audio, summarize notes, detect sentiment.&quot;,
+        &quot;input_model&quot;: Task7Input,
+        &quot;output_model&quot;: Task7Output,
+    }
+
+t7_inputs = [Task7Input(audio_path=f&quot;/audio/meeting_{i}.wav&quot;) for i in range(1, 11)]
+t7_outputs = [
+    Task7Output(transcript=&quot;Transcribed text&quot;, summary=&quot;Short summary...&quot;, sentiment=&quot;positive&quot;, score=0.9)
+    for _ in t7_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="8-weather-convert-pdf">8. Weather + Convert + PDF</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task8Input(BaseModel):
+    city: str = Field(..., description=&quot;City for weather.&quot;)
+    to_unit: str = Field(&quot;F&quot;, description=&quot;Target unit for temperature (e.g., 'F').&quot;)
+    report_title: Optional[str] = Field(&quot;Weather Report&quot;, description=&quot;Report title.&quot;)
+
+class Task8Output(BaseModel):
+    report_pdf_path: str = Field(..., description=&quot;PDF path for report.&quot;)
+    temperature_converted: float = Field(..., description=&quot;Converted temperature.&quot;)
+    condition: str = Field(..., description=&quot;Weather condition.&quot;)
+
+task_specs['task_8'] = {
+        &quot;description&quot;: &quot;Get weather, convert units to Fahrenheit, generate report PDF.&quot;,
+        &quot;input_model&quot;: Task8Input,
+        &quot;output_model&quot;: Task8Output,
+    }
+
+t8_inputs = [
+    Task8Input(city=c, to_unit=&quot;F&quot;, report_title=f&quot;{c} Weather Report&quot;)
+    for c in [&quot;Paris&quot;, &quot;Berlin&quot;, &quot;Warsaw&quot;, &quot;Tokyo&quot;, &quot;Sydney&quot;, &quot;NYC&quot;, &quot;London&quot;, &quot;Toronto&quot;, &quot;Lisbon&quot;, &quot;Rome&quot;]
+]
+# get_weather temp=20 ; convert_units =&gt; 20*1.3=26.0 ; report path fixed
+t8_outputs = [
+    Task8Output(report_pdf_path=&quot;/tmp/report.pdf&quot;, temperature_converted=26.0, condition=&quot;Sunny&quot;)
+    for _ in t8_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="9-web-search-rewrite">9. Web Search + Rewrite</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task9Input(BaseModel):
+    search_input: str = Field(..., description=&quot;Web search query.&quot;)
+    tone: str = Field(&quot;formal&quot;, description=&quot;Target tone for rewriting.&quot;)
+
+class Task9Output(BaseModel):
+    keywords: List[str] = Field(..., description=&quot;Extracted keywords.&quot;)
+    rewritten: str = Field(..., description=&quot;Rewritten text in requested tone.&quot;)
+    sources: List[str] = Field(..., description=&quot;List of source snippets/links.&quot;)
+
+task_specs['task_9'] = {
+        &quot;description&quot;: &quot;Query web, extract keywords, rewrite text to formal tone.&quot;,
+        &quot;input_model&quot;: Task9Input,
+        &quot;output_model&quot;: Task9Output,
+    }
+
+t9_inputs = [
+    Task9Input(search_input=q, tone=tone)
+    for q, tone in [
+        (&quot;latest AI news&quot;, &quot;formal&quot;), (&quot;travel tips Japan&quot;, &quot;neutral&quot;), (&quot;healthy recipes&quot;, &quot;friendly&quot;),
+        (&quot;best running shoes 2025&quot;, &quot;concise&quot;), (&quot;python decorators&quot;, &quot;technical&quot;),
+        (&quot;sql vs nosql&quot;, &quot;balanced&quot;), (&quot;renewable energy facts&quot;, &quot;informative&quot;),
+        (&quot;quantum computing basics&quot;, &quot;simple&quot;), (&quot;cloud cost optimization&quot;, &quot;professional&quot;),
+        (&quot;mlops pipelines&quot;, &quot;succinct&quot;),
+    ]
+]
+# extract_keywords const ; summarize const ; rewrite_text =&gt; f&quot;{tone} version of Short summary...&quot;
+t9_outputs = [
+    Task9Output(
+        keywords=[&quot;keyword1&quot;, &quot;keyword2&quot;],
+        rewritten=f&quot;{i.tone} version of {i.search_input}&quot;,
+        sources=[&quot;Relevant content found in first search result is ...&quot;],
+    ) for i in t9_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="10-image-objects-email">10. Image Objects + Email</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task10Input(BaseModel):
+    image_path: str = Field(..., description=&quot;Path to image file.&quot;)
+    city: str = Field(..., description=&quot;City where email should be sent.&quot;)
+    title: Optional[str] = Field(&quot;Photo Analysis&quot;, description=&quot;Email title.&quot;)
+
+class Task10Output(BaseModel):
+    objects: List[str] = Field(..., description=&quot;Detected objects in image.&quot;)
+    email_sent: bool = Field(..., description=&quot;Whether the email was sent.&quot;)
+    message: Optional[str] = Field(None, description=&quot;Email send message.&quot;)
+
+task_specs['task_10'] = {
+        &quot;description&quot;: &quot;Detect objects in photo, generate short summary text, send email, leave message.&quot;,
+        &quot;input_model&quot;: Task10Input,
+        &quot;output_model&quot;: Task10Output,
+    }
+
+t10_inputs = [
+    Task10Input(image_path=f&quot;/img/photo_{i}.jpg&quot;, city=c, title=&quot;Photo Analysis&quot;)
+    for i, c in enumerate([&quot;Paris&quot;,&quot;Berlin&quot;,&quot;Warsaw&quot;,&quot;Tokyo&quot;,&quot;Sydney&quot;,&quot;NYC&quot;,&quot;London&quot;,&quot;Toronto&quot;,&quot;Lisbon&quot;,&quot;Rome&quot;], 1)
+]
+t10_outputs = [
+    Task10Output(objects=[&quot;cat&quot;, &quot;chair&quot;], email_sent=True, message=&quot;Email sent to city of your choosing!&quot;)
+    for _ in t10_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="11-distance-currency-sms">11. Distance + Currency + SMS</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task11Input(BaseModel):
+    lat1: float
+    lon1: float
+    lat2: float
+    lon2: float
+    amount: float = Field(..., description=&quot;Amount to convert for ticket.&quot;)
+    from_currency: str
+    to_currency: str
+    phone: str
+
+class Task11Output(BaseModel):
+    distance_km: float
+    converted_amount: float
+    sms_sent: bool
+
+task_specs['task_11'] = {
+        &quot;description&quot;: &quot;Calculate distance between cities, convert currency for ticket, send SMS.&quot;,
+        &quot;input_model&quot;: Task11Input,
+        &quot;output_model&quot;: Task11Output,
+    }
+
+t11_inputs = [
+    Task11Input(
+        lat1=52.2297, lon1=21.0122, lat2=48.8566, lon2=2.3522,
+        amount=amt, from_currency=&quot;USD&quot;, to_currency=&quot;EUR&quot;, phone=f&quot;+1555011{i:02d}&quot;
+    )
+    for i, amt in enumerate([10, 20, 35, 50, 75, 100, 125.5, 200, 350, 500], 1)
+]
+# calculate_distance =&gt; 42 ; currency_exchange =&gt; amount*1.1 ; sms True
+t11_outputs = [
+    Task11Output(distance_km=42.0, converted_amount=round(i.amount * 1.1, 6), sms_sent=True)
+    for i in t11_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="12-summarize-file-email">12. Summarize File + Email</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task12Input(BaseModel):
+    path: str = Field(..., description=&quot;Path of text file to load.&quot;)
+    out_filename: str = Field(..., description=&quot;Filename for stored summary.&quot;)
+    city: str = Field(..., description=&quot;City where notification email is sent.&quot;)
+
+class Task12Output(BaseModel):
+    stored_path: str = Field(..., description=&quot;Path to stored summary file.&quot;)
+    summary: str = Field(..., description=&quot;Summary content.&quot;)
+    email_sent: bool = Field(..., description=&quot;Whether email was sent.&quot;)
+
+task_specs['task_12'] = {
+        &quot;description&quot;: &quot;Load text file, summarize, store summary as new file, email notification.&quot;,
+        &quot;input_model&quot;: Task12Input,
+        &quot;output_model&quot;: Task12Output,
+    }
+
+t12_inputs = [
+    Task12Input(path=f&quot;/docs/file_{i}.txt&quot;, out_filename=f&quot;summary_{i}.txt&quot;, city=c)
+    for i, c in enumerate([&quot;Paris&quot;,&quot;Berlin&quot;,&quot;Warsaw&quot;,&quot;Tokyo&quot;,&quot;Sydney&quot;,&quot;NYC&quot;,&quot;London&quot;,&quot;Toronto&quot;,&quot;Lisbon&quot;,&quot;Rome&quot;], 1)
+]
+# load_file =&gt; content ignored; summarize const; store_file =&gt; /tmp/{out_filename}; email True
+t12_outputs = [
+    Task12Output(stored_path=f&quot;/tmp/{i.out_filename}&quot;, summary=&quot;Short summary...&quot;, email_sent=True)
+    for i in t12_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="13-db-stock-order-email">13. DB Stock + Order + Email</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task13Input(BaseModel):
+    topic: str = Field(..., description=&quot;Topic to query from DB.&quot;)
+    item_id: str = Field(..., description=&quot;Item identifier for stock/order.&quot;)
+    quantity: int = Field(..., description=&quot;Order quantity.&quot;)
+    location: str = Field(..., description=&quot;Stock location.&quot;)
+    city: str = Field(..., description=&quot;City for confirmation email.&quot;)
+
+class Task13Output(BaseModel):
+    available: bool
+    stock: int
+    order_id: str
+    status: str
+    email_sent: bool
+
+task_specs['task_13'] = {
+        &quot;description&quot;: &quot;Query database, check stock availability, create order, confirm email.&quot;,
+        &quot;input_model&quot;: Task13Input,
+        &quot;output_model&quot;: Task13Output,
+    }
+
+
+t13_inputs = [
+    Task13Input(
+        topic=tpc, item_id=f&quot;SKU-{1000+i}&quot;, quantity=q, location=loc, city=city
+    )
+    for i, (tpc, q, loc, city) in enumerate([
+        (&quot;laptops&quot;,1,&quot;WH-A&quot;,&quot;Paris&quot;), (&quot;monitors&quot;,2,&quot;WH-B&quot;,&quot;Berlin&quot;), (&quot;keyboards&quot;,5,&quot;WH-A&quot;,&quot;Warsaw&quot;),
+        (&quot;mice&quot;,3,&quot;WH-C&quot;,&quot;Tokyo&quot;), (&quot;chairs&quot;,1,&quot;WH-D&quot;,&quot;Sydney&quot;), (&quot;desks&quot;,2,&quot;WH-A&quot;,&quot;NYC&quot;),
+        (&quot;hubs&quot;,4,&quot;WH-B&quot;,&quot;London&quot;), (&quot;cables&quot;,10,&quot;WH-C&quot;,&quot;Toronto&quot;), (&quot;routers&quot;,2,&quot;WH-A&quot;,&quot;Lisbon&quot;),
+        (&quot;ssd&quot;,3,&quot;WH-D&quot;,&quot;Rome&quot;)
+    ], 1)
+]
+# check_availability =&gt; available=True, stock=5; create_order =&gt; ORD-001, created; email True
+t13_outputs = [
+    Task13Output(available=True, stock=5, order_id=&quot;ORD-001&quot;, status=&quot;created&quot;, email_sent=True)
+    for _ in t13_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="14-distance-plot">14. Distance Plot</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task14Input(BaseModel):
+    city_a: str = Field(..., description=&quot;First city.&quot;)
+    city_b: str = Field(..., description=&quot;Second city.&quot;)
+    title: str = Field(&quot;Distance Plot&quot;, description=&quot;Plot title.&quot;)
+
+class Task14Output(BaseModel):
+    distance_km: float
+    plot_path: str
+    lat_a: float
+    lon_a: float
+    lat_b: float
+    lon_b: float
+
+task_specs['task_14'] = {
+        &quot;description&quot;: &quot;Lookup coordinates, calculate distance, generate map plot, send to web.&quot;,
+        &quot;input_model&quot;: Task14Input,
+        &quot;output_model&quot;: Task14Output,
+    }
+
+t14_inputs = [
+    Task14Input(city_a=a, city_b=b, title=&quot;Distance Plot&quot;)
+    for a, b in [
+        (&quot;Warsaw&quot;,&quot;Paris&quot;), (&quot;Berlin&quot;,&quot;London&quot;), (&quot;Tokyo&quot;,&quot;Seoul&quot;), (&quot;NYC&quot;,&quot;Boston&quot;), (&quot;LA&quot;,&quot;SF&quot;),
+        (&quot;Sydney&quot;,&quot;Melbourne&quot;), (&quot;Toronto&quot;,&quot;Montreal&quot;), (&quot;Lisbon&quot;,&quot;Madrid&quot;), (&quot;Rome&quot;,&quot;Milan&quot;), (&quot;Prague&quot;,&quot;Vienna&quot;)
+    ]
+]
+t14_outputs = [
+    Task14Output(distance_km=42.0, plot_path=&quot;/tmp/plot.png&quot;,
+                 lat_a=10.0, lon_a=20.0, lat_b=10.0, lon_b=20.0)
+    for _ in t14_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="15-web-sentiment-summary">15. Web Sentiment Summary</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task15Input(BaseModel):
+    search_input: str = Field(..., description=&quot;Query for web search.&quot;)
+    rewrite_tone: str = Field(&quot;concise&quot;, description=&quot;Tone for rewritten text.&quot;)
+
+class Task15Output(BaseModel):
+    summary: str
+    sentiment: str
+    score: float
+    keywords: List[str]
+    rewritten: str
+    sources: List[str]
+
+task_specs['task_15'] = {
+        &quot;description&quot;: &quot;Query web, detect sentiment, extract keywords, summarize, rewrite.&quot;,
+        &quot;input_model&quot;: Task15Input,
+        &quot;output_model&quot;: Task15Output,
+    }
+
+t15_inputs = [
+    Task15Input(search_input=q, rewrite_tone=tone)
+    for q, tone in [
+        (&quot;compare llms&quot;, &quot;concise&quot;), (&quot;fastapi vs flask&quot;, &quot;neutral&quot;), (&quot;docker best practices&quot;, &quot;professional&quot;),
+        (&quot;kubernetes basics&quot;, &quot;simple&quot;), (&quot;vector databases&quot;, &quot;technical&quot;), (&quot;retrieval augmented generation&quot;, &quot;formal&quot;),
+        (&quot;prompt engineering tips&quot;, &quot;friendly&quot;), (&quot;gpu optimization&quot;, &quot;succinct&quot;), (&quot;pydantic v2 changes&quot;, &quot;informative&quot;),
+        (&quot;langchain vs llamaindex&quot;, &quot;balanced&quot;),
+    ]
+]
+t15_outputs = [
+    Task15Output(
+        summary=&quot;Short summary...&quot;, sentiment=&quot;positive&quot;, score=0.9,
+        keywords=[&quot;keyword1&quot;, &quot;keyword2&quot;],
+        rewritten=f&quot;{i.rewrite_tone} version of Short summary...&quot;,
+        sources=[&quot;Result 1&quot;,&quot;Result 2&quot;],
+    )
+    for i in t15_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="16-weather-audio-report">16. Weather + Audio + Report</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task16Input(BaseModel):
+    city: str = Field(..., description=&quot;City name.&quot;)
+    audio_path: str = Field(..., description=&quot;Path to instructions audio.&quot;)
+    report_title: str = Field(&quot;City Ops Report&quot;, description=&quot;Report title.&quot;)
+
+class Task16Output(BaseModel):
+    pdf_path: str
+    email_sent: bool
+    transcript: str
+    condition: str
+    temperature_c: float
+    lat: float
+    lon: float
+
+task_specs['task_16'] = {
+        &quot;description&quot;: &quot;Get weather, lookup coordinates, transcribe audio instructions, generate report, send email.&quot;,
+        &quot;input_model&quot;: Task16Input,
+        &quot;output_model&quot;: Task16Output,
+    }
+
+t16_inputs = [
+    Task16Input(city=c, audio_path=f&quot;/audio/instructions_{i}.wav&quot;, report_title=&quot;City Ops Report&quot;)
+    for i, c in enumerate([&quot;Paris&quot;,&quot;Berlin&quot;,&quot;Warsaw&quot;,&quot;Tokyo&quot;,&quot;Sydney&quot;,&quot;NYC&quot;,&quot;London&quot;,&quot;Toronto&quot;,&quot;Lisbon&quot;,&quot;Rome&quot;], 1)
+]
+t16_outputs = [
+    Task16Output(pdf_path=&quot;/tmp/report.pdf&quot;, email_sent=True, transcript=&quot;Transcribed text&quot;,
+                 condition=&quot;Sunny&quot;, temperature_c=20.0, lat=10.0, lon=20.0)
+    for _ in t16_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="17-db-distance-report">17. DB + Distance + Report</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task17Input(BaseModel):
+    topic: str = Field(..., description=&quot;DB topic to query.&quot;)
+    lat1: float
+    lon1: float
+    lat2: float
+    lon2: float
+    image_path: str
+    label: str
+    phone: str
+    report_title: str = Field(&quot;DB+Distance Report&quot;, description=&quot;Report title.&quot;)
+
+class Task17Output(BaseModel):
+    report_pdf_path: str
+    image_url: str
+    distance_km: float
+    sms_sent: bool
+    uid: str
+
+task_specs['task_17'] = {
+        &quot;description&quot;: &quot;Query database, calculate distance, generate PDF report, upload image, send SMS results.&quot;,
+        &quot;input_model&quot;: Task17Input,
+        &quot;output_model&quot;: Task17Output,
+    }
+
+t17_inputs = [
+    Task17Input(
+        topic=&quot;infrastructure&quot;,
+        lat1=52.2297, lon1=21.0122, lat2=48.8566, lon2=2.3522,
+        image_path=f&quot;/img/{i}.png&quot;, label=f&quot;case-{i}&quot;, phone=f&quot;+1555017{i:02d}&quot;,
+        report_title=&quot;DB+Distance Report&quot;
+    )
+    for i in range(1, 11)
+]
+t17_outputs = [
+    Task17Output(report_pdf_path=&quot;/tmp/report.pdf&quot;, image_url=&quot;http://img.local&quot;,
+                 distance_km=42.0, sms_sent=True, uid=&quot;0000&quot;)
+    for _ in t17_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="18-call-summary-order">18. Call Summary + Order</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task18Input(BaseModel):
+    audio_path: str
+    item_id: str
+    quantity: int
+    city: str = Field(..., description=&quot;City for email notification.&quot;)
+    out_filename: str = Field(&quot;call_summary.txt&quot;, description=&quot;Filename to store summary.&quot;)
+
+class Task18Output(BaseModel):
+    transcript: str
+    sentiment: str
+    score: float
+    stored_path: str
+    order_id: str
+    order_status: str
+    email_sent: bool
+
+task_specs['task_18'] = {
+        &quot;description&quot;: &quot;Transcribe call audio, detect sentiment, store summary, create order, check status, send email.&quot;,
+        &quot;input_model&quot;: Task18Input,
+        &quot;output_model&quot;: Task18Output,
+    }
+
+t18_inputs = [
+    Task18Input(
+        audio_path=f&quot;/audio/call_{i}.wav&quot;, item_id=f&quot;SKU-{2000+i}&quot;, quantity=(i % 5) + 1,
+        city=c, out_filename=f&quot;call_summary_{i}.txt&quot;
+    )
+    for i, c in enumerate([&quot;Paris&quot;,&quot;Berlin&quot;,&quot;Warsaw&quot;,&quot;Tokyo&quot;,&quot;Sydney&quot;,&quot;NYC&quot;,&quot;London&quot;,&quot;Toronto&quot;,&quot;Lisbon&quot;,&quot;Rome&quot;], 1)
+]
+t18_outputs = [
+    Task18Output(transcript=&quot;Transcribed text&quot;, sentiment=&quot;positive&quot;, score=0.9,
+                 stored_path=f&quot;/tmp/{i.out_filename}&quot;, order_id=&quot;ORD-001&quot;,
+                 order_status=&quot;in progress&quot;, email_sent=True)
+    for i in t18_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="19-web-summary-report">19. Web Summary + Report</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task19Input(BaseModel):
+    search_input: str
+    rewrite_tone: str = Field(&quot;formal&quot;, description=&quot;Tone for rewritten copy.&quot;)
+    amount: float
+    from_currency: str
+    to_currency: str
+    report_title: str = Field(&quot;Web Findings Report&quot;, description=&quot;Report title.&quot;)
+    phone: str
+
+class Task19Output(BaseModel):
+    report_pdf_path: str
+    rewritten: str
+    converted_amount: float
+    summary: str
+    sms_sent: bool
+    sources: List[str]
+
+task_specs['task_19'] = {
+        &quot;description&quot;: &quot;Query web, summarize results, rewrite text, convert currency estimate, generate report, send SMS.&quot;,
+        &quot;input_model&quot;: Task19Input,
+        &quot;output_model&quot;: Task19Output,
+    }
+
+t19_inputs = [
+    Task19Input(
+        search_input=q, rewrite_tone=&quot;formal&quot;, amount=amt,
+        from_currency=&quot;USD&quot;, to_currency=&quot;EUR&quot;, report_title=&quot;Web Findings Report&quot;, phone=f&quot;+1555019{i:02d}&quot;
+    )
+    for i, (q, amt) in enumerate([
+        (&quot;ai news&quot;,10), (&quot;best laptops&quot;,25), (&quot;learn python&quot;,50), (&quot;k8s tutorial&quot;,75), (&quot;docker tips&quot;,100),
+        (&quot;mlops guide&quot;,125), (&quot;git workflows&quot;,150), (&quot;fastapi examples&quot;,200), (&quot;sql tuning&quot;,300), (&quot;cloud costs&quot;,500)
+    ], 1)
+]
+t19_outputs = [
+    Task19Output(
+        report_pdf_path=&quot;/tmp/report.pdf&quot;, rewritten=&quot;formal version of Short summary...&quot;,
+        converted_amount=round(i.amount * 1.1, 6), summary=&quot;Short summary...&quot;, sms_sent=True,
+        sources=[&quot;Result 1&quot;,&quot;Result 2&quot;]
+    )
+    for i in t19_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<h4 id="20-full-pipeline-showcase">20. Full Pipeline Showcase</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task20Input(BaseModel):
+    db_topic: str = Field(..., description=&quot;Topic for DB query.&quot;)
+    web_query: str = Field(..., description=&quot;Query for web search.&quot;)
+    city: str = Field(..., description=&quot;City for weather and email.&quot;)
+    units_to: str = Field(&quot;F&quot;, description=&quot;Target unit for temperature.&quot;)
+    lat1: float
+    lon1: float
+    lat2: float
+    lon2: float
+    plot_title: str = Field(&quot;Route Distance&quot;, description=&quot;Plot title.&quot;)
+    file_name: str = Field(&quot;summary.txt&quot;, description=&quot;Filename for stored summary.&quot;)
+    image_path: str
+    image_label: str
+    item_id: str
+    quantity: int
+    phone: str
+    report_title: str = Field(&quot;Comprehensive Report&quot;, description=&quot;Report title.&quot;)
+    rewrite_tone: str = Field(&quot;professional&quot;, description=&quot;Tone for rewritten text.&quot;)
+
+class Task20Output(BaseModel):
+    keywords: List[str]
+    summary: str
+    sentiment: str
+    score: float
+    rewritten: str
+    lat: float
+    lon: float
+    condition: str
+    temperature_converted: float
+    distance_km: float
+    plot_path: str
+    report_pdf_path: str
+    stored_path: str
+    loaded_content: str
+    image_url: str
+    order_id: str
+    order_status: str
+    sms_sent: bool
+    email_sent: bool
+    db_uid: str
+
+task_specs['task_20'] = {
+        &quot;description&quot;: (
+            &quot;Query database → query web → extract keywords → summarize → detect sentiment → rewrite → &quot;
+            &quot;lookup coordinates → get weather → convert units → calculate distance → create plot → generate &quot;
+            &quot;report → store file → load file → upload image → create order → check status → send SMS → &quot;
+            &quot;send email → save summary to DB.&quot;
+        ),
+        &quot;input_model&quot;: Task20Input,
+        &quot;output_model&quot;: Task20Output,
+    }
+
+t20_inputs = [
+    Task20Input(
+        db_topic=&quot;urban planning&quot;,
+        web_query=f&quot;transport trends {2020+i}&quot;,
+        city=c,
+        units_to=&quot;F&quot;,
+        lat1=52.2297, lon1=21.0122, lat2=48.8566, lon2=2.3522,
+        plot_title=&quot;Route Distance&quot;,
+        file_name=f&quot;summary_{i}.txt&quot;,
+        image_path=f&quot;/img/mega_{i}.png&quot;,
+        image_label=f&quot;mega-{i}&quot;,
+        item_id=f&quot;SKU-MEGA-{i}&quot;,
+        quantity=(i % 5) + 1,
+        phone=f&quot;+1555020{i:02d}&quot;,
+        report_title=&quot;Comprehensive Report&quot;,
+        rewrite_tone=&quot;professional&quot;,
+    )
+    for i, c in enumerate([&quot;Paris&quot;,&quot;Berlin&quot;,&quot;Warsaw&quot;,&quot;Tokyo&quot;,&quot;Sydney&quot;,&quot;NYC&quot;,&quot;London&quot;,&quot;Toronto&quot;,&quot;Lisbon&quot;,&quot;Rome&quot;], 1)
+]
+t20_outputs = [
+    Task20Output(
+        keywords=[&quot;keyword1&quot;,&quot;keyword2&quot;], summary=&quot;Short summary...&quot;, sentiment=&quot;positive&quot;, score=0.9,
+        rewritten=&quot;professional version of Short summary...&quot;, lat=10.0, lon=20.0, condition=&quot;Sunny&quot;,
+        temperature_converted=26.0, distance_km=42.0, plot_path=&quot;/tmp/plot.png&quot;,
+        report_pdf_path=&quot;/tmp/report.pdf&quot;, stored_path=f&quot;/tmp/{i.file_name}&quot;,
+        loaded_content=&quot;Loaded file contents...&quot;, image_url=&quot;http://img.local&quot;,
+        order_id=&quot;ORD-001&quot;, order_status=&quot;in progress&quot;, sms_sent=True, email_sent=True, db_uid=&quot;0000&quot;
+    )
+    for i in t20_inputs
+]
+
+</code></pre>
+
+
+</details>
+
+<blockquote>
+<p>Note: Tasks 21–25 are examples that should <strong>not</strong> work with the provided example tools list.</p>
+</blockquote>
+<h4 id="21-db-summary-notify">21. DB Summary + Notify</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task21Input(BaseModel):
+    db_topic: str = Field(..., description=&quot;Topic for DB query.&quot;)
+    phone: str = Field(..., description=&quot;Phone number to notify.&quot;)
+    report_title: str = Field(&quot;Summary Report&quot;, description=&quot;Report title.&quot;)
+    city: str = Field(&quot;Berlin&quot;, description=&quot;City for report email.&quot;)
+
+class Task21Output(BaseModel):
+    summary: str
+    sms_sent: bool
+    email_sent: bool
+    db_uid: str
+    db_write_uid: str
+
+
+task_specs['task_21'] = {
+        &quot;description&quot;: (
+            &quot;Query database -&gt; summarize -&gt; send SMS -&gt; send email -&gt; save summary to DB.&quot;
+        ),
+        &quot;input_model&quot;: Task21Input,
+        &quot;output_model&quot;: Task21Output,
+    }
+
+t21_inputs = [
+    Task21Input(db_topic=f&quot;topic-{i}&quot;, phone=f&quot;+1555000{i:02d}&quot;)
+    for i in range(1, 6)
+]
+
+t21_outputs = [
+    Task21Output(
+        summary=&quot;Short summary...&quot;,
+        sms_sent=True,
+        email_sent=True,
+        db_uid=&quot;0000&quot;,
+        db_write_uid=&quot;WRITE-0000&quot;,
+    ) for _ in t21_inputs
+]
+
+
+</code></pre>
+
+
+</details>
+
+<h4 id="22-ocr-image">22. OCR Image</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task22Input(BaseModel):
+    image_path: str
+    label: str
+
+class Task22Output(BaseModel):
+    ocr_text: str
+    image_url: str
+
+
+task_specs['task_22'] = {
+        &quot;description&quot;: (
+            &quot;Upload image -&gt; extract text from image (OCR).&quot;
+        ),
+        &quot;input_model&quot;: Task22Input,
+        &quot;output_model&quot;: Task22Output,
+    }
+
+t22_inputs = [
+    Task22Input(image_path=f&quot;/img/doc_{i}.png&quot;, label=f&quot;doc-{i}&quot;)
+    for i in range(1, 6)
+]
+
+t22_outputs = [
+    Task22Output(
+        ocr_text=&quot;Detected text...&quot;,
+        image_url=&quot;http://img.local&quot;,
+    ) for _ in t22_inputs
+]
+
+
+</code></pre>
+
+
+</details>
+
+<h4 id="23-embedding-index">23. Embedding + Index</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task23Input(BaseModel):
+    text: str
+    top_k: int = Field(5, description=&quot;Number of nearest neighbors.&quot;)
+
+class Task23Output(BaseModel):
+    embedding: List[float]
+    index_id: str
+
+
+task_specs['task_23'] = {
+        &quot;description&quot;: (
+            &quot;Generate embedding -&gt; store in vector index -&gt; return index id.&quot;
+        ),
+        &quot;input_model&quot;: Task23Input,
+        &quot;output_model&quot;: Task23Output,
+    }
+
+t23_inputs = [
+    Task23Input(text=f&quot;sample text {i}&quot;)
+    for i in range(1, 6)
+]
+
+t23_outputs = [
+    Task23Output(
+        embedding=[0.1, 0.2, 0.3],
+        index_id=&quot;vec-0000&quot;,
+    ) for _ in t23_inputs
+]
+
+
+</code></pre>
+
+
+</details>
+
+<h4 id="24-contract-compliance">24. Contract Compliance</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task24Input(BaseModel):
+    contract_text: str
+    region: str = Field(&quot;EU&quot;, description=&quot;Compliance region.&quot;)
+
+class Task24Output(BaseModel):
+    compliance_report: str
+    risk_score: float
+
+
+task_specs['task_24'] = {
+        &quot;description&quot;: (
+            &quot;Analyze contract -&gt; run compliance check -&gt; return report and risk score.&quot;
+        ),
+        &quot;input_model&quot;: Task24Input,
+        &quot;output_model&quot;: Task24Output,
+    }
+
+t24_inputs = [
+    Task24Input(contract_text=f&quot;contract text {i}&quot;)
+    for i in range(1, 6)
+]
+
+t24_outputs = [
+    Task24Output(
+        compliance_report=&quot;No issues found.&quot;,
+        risk_score=0.1,
+    ) for _ in t24_inputs
+]
+
+
+</code></pre>
+
+
+</details>
+
+<h4 id="25-crypto-transfer">25. Crypto Transfer</h4>
+<details>
+
+
+<pre><code class="language-python">
+class Task25Input(BaseModel):
+    wallet_from: str
+    wallet_to: str
+    amount: float
+
+class Task25Output(BaseModel):
+    tx_hash: str
+    receipt_url: str
+
+
+task_specs['task_25'] = {
+        &quot;description&quot;: (
+            &quot;Transfer crypto -&gt; return transaction hash and receipt URL.&quot;
+        ),
+        &quot;input_model&quot;: Task25Input,
+        &quot;output_model&quot;: Task25Output,
+    }
+
+t25_inputs = [
+    Task25Input(wallet_from=f&quot;0xFROM{i}&quot;, wallet_to=f&quot;0xTO{i}&quot;, amount=1.5 + i)
+    for i in range(1, 6)
+]
+
+t25_outputs = [
+    Task25Output(
+        tx_hash=&quot;0xHASH&quot;,
+        receipt_url=&quot;http://chain.local/tx/0xHASH&quot;,
+    ) for _ in t25_inputs
+]
+
+
+</code></pre>
+
+
+</details>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
+      
+    
+  </body>
+</html>

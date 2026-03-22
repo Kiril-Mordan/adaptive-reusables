@@ -247,7 +247,7 @@ test_outputs2.error.model_dump()
 
 
 
-    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 874, in _run_func\n    output = func(inputs = inputs)\n  File "/tmp/ipykernel_8035/3259375930.py", line 11, in get_weather\n    error\nNameError: name \'error\' is not defined\n',
+    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1050, in _run_func\n    output = func(inputs = inputs)\n  File "/tmp/ipykernel_9856/3259375930.py", line 11, in get_weather\n    error\nNameError: name \'error\' is not defined\n',
      'error_type': <WorkflowErrorType.RUNNER: 'runner'>,
      'additional_info': {'ffunction': 'get_weather'}}
 
@@ -259,9 +259,9 @@ print(test_outputs2.error.error_message)
 ```
 
     Traceback (most recent call last):
-      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 874, in _run_func
+      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1050, in _run_func
         output = func(inputs = inputs)
-      File "/tmp/ipykernel_8035/3259375930.py", line 11, in get_weather
+      File "/tmp/ipykernel_9856/3259375930.py", line 11, in get_weather
         error
     NameError: name 'error' is not defined
     
@@ -327,7 +327,7 @@ test_outputs3.error.model_dump()
 
 
 
-    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1014, in run_workflow\n    func_item = [av for av in available_functions \\\nIndexError: list index out of range\n',
+    {'error_message': 'Traceback (most recent call last):\n  File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1194, in run_workflow\n    func_item = [av for av in available_functions \\\nIndexError: list index out of range\n',
      'error_type': <WorkflowErrorType.PLANNING_HF: 'planning_hf'>,
      'additional_info': {}}
 
@@ -339,7 +339,7 @@ print(test_outputs3.error.error_message)
 ```
 
     Traceback (most recent call last):
-      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1014, in run_workflow
+      File "/home/kyriosskia/miniforge3/envs/testenv/lib/python3.10/site-packages/workflow_auto_assembler/workflow_auto_assembler.py", line 1194, in run_workflow
         func_item = [av for av in available_functions \
     IndexError: list index out of range
     
@@ -372,6 +372,14 @@ test_outputs4.error.model_dump()
 
     {'error_message': 'Actual outputs do not match expected!',
      'error_type': <WorkflowErrorType.OUTPUTS_UNEXPECTED: 'outputs_unexpected'>,
-     'additional_info': {'differences': ["city: 'London' != 'Berlin'"]}}
+     'additional_info': {'step_id': 4,
+      'differences': [{'path': 'city',
+        'source_key': 'city',
+        'diff_type': 'value_mismatch',
+        'expected': 'London',
+        'actual': 'Berlin',
+        'output': '0.output.city',
+        'source_step_id': 0,
+        'source': 'user_input'}]}}
 
 

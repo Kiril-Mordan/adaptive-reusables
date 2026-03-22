@@ -1,0 +1,6 @@
+attrsx
+pyyaml
+attrs
+pydantic
+openai
+ollama

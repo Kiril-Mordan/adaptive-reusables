@@ -16,3 +16,10 @@ around large language models. It exists to explore the author's ideas about LLM-
 
 ---
 
+ 
+## Packages
+ 
+ 
+Links to the extended documentation of packaged modules, available through gh-pages:
+ 
+- [![MkDocs](https://img.shields.io/static/v1?label=&message=Workflow-auto-assembler&color=darkgreen&logo=mkdocs)](https://kiril-mordan.github.io/adaptive-reusables/workflow_auto_assembler) [![PyPiVersion](https://img.shields.io/pypi/v/workflow-auto-assembler)](https://pypi.org/project/workflow-auto-assembler/) 

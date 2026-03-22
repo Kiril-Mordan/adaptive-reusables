@@ -1,7 +1,12 @@
-The following contains 20 different workflows based on a list of available functions that demonstrait `workflow-auto-assembler` in action.
+This notebook collects example tool catalogs and example workflow tasks used to demonstrate `workflow_auto_assembler` in action.
+
+The examples are intentionally synthetic. Their purpose is to show how WAA assembles typed linear workflows from available tool schemas, not to claim broad real-world agent capability.
 
 
 ### Example functions
+
+
+A set of 24 simple mock functions was defined alongside explicit input and output models. Together they form the available tool catalog from which WAA assembles workflows.
 
 <details>
 
@@ -344,137 +349,17 @@ def query_web(inputs : QueryWebInput) -> QueryWebOutput:
 
 </details>
 
-Few helper functions were defined to run and evaluate experiments.
+### Example tasks
+
+To test schema-first planning, 25 workflow tasks were defined through a description plus target input and output models. These tasks were used during development and can serve as templates for creating new benchmark or demo tasks.
+
+#### 1. Translate to French
+
 
 <details>
 
 ```python
 
-import traceback
-
-async def run_wa(available_tools, wa_class, *args, **kwargs):
-
-    wa = wa_class(
-            available_functions = available_tools["available_functions"],
-            available_callables = available_tools["available_callables"],
-            llm_handler_params = {
-                "llm_h_type" : "ollama",
-                "llm_h_params" : {
-                    "connection_string": "http://localhost:11434",
-                    "model_name": "gpt-oss:20b"
-                }
-            }
-        )
-
-    try:
-
-    
-        wf_obj = await wa.plan_workflow(
-        *args, **kwargs
-    )
-        error = None
-    except Exception as e:
-        error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-        print(error_message)
-        wf_obj = None
-        error = error_message
-
-    return {"wf_obj" : wf_obj, "error": error }
-
-
-def check_workflow_plans(task_name, results, expected_results):
-
-    errors = [idx for idx, result in enumerate(results) if result["error"] is not None]
-    no_errors = [idx for idx, result in enumerate(results) if result["error"] is None]
-    workflow_possible = [idx for idx in no_errors if results[idx]['wf_obj'].workflow_possible == True]
-    inpossible_workflow = [idx for idx in no_errors if results[idx]['wf_obj'].workflow_possible != True]
-    workflow_completed = [idx for idx in workflow_possible if results[idx]['wf_obj'].workflow_completed == True]
-    incompleted_workflows = [idx for idx, result in enumerate(results) if idx not in workflow_completed]
-
-
-    workflow_corrent = [idx for idx in workflow_completed if results[idx]['wf_obj'].planning.tester.outputs[str(len(results[idx]['wf_obj'].planning.tester.outputs)-1)] == expected_results[idx] ]
-    incorrect_workflows = [idx for idx, result in enumerate(results) if idx not in workflow_corrent]
-
-    return {
-        "task" : task_name,
-        "n_errors" : len(errors),
-        "frac_errors" : len(errors)/len(results),
-        "failed_retries" : errors,
-        "n_workflow_possible": len(workflow_possible),
-        "frac_workflow_possible": len(workflow_possible)/len(results),
-        "n_workflow_completed": len(workflow_completed),
-        "frac_workflow_completed": len(workflow_completed)/len(results),
-        "n_workflow_correct": len(workflow_corrent),
-        "frac_workflow_correct": len(workflow_corrent)/len(results),
-        "errors_idx" : errors,
-        "inpossible_workflows" : inpossible_workflow,
-        "incompleted_workflows" : incompleted_workflows,
-        "incorrect_workflows_idx" : incorrect_workflows
-
-
-    }
-
-
-```
-
-</details>
-
-
-```python
-from workflow_auto_assembler import WorkflowAutoAssembler, AssembledWorkflow
-from workflow_auto_assembler import create_avc_items, LlmFunctionItemInput
-from workflow_auto_assembler.artifacts.examples.functions import *
-from workflow_auto_assembler.artifacts.examples.analysis_helpers import run_wa, check_workflow_plans
-
-available_tools = create_avc_items(functions = [
-    LlmFunctionItemInput(func = translate_text),
-    LlmFunctionItemInput(func = summarize_text),
-    LlmFunctionItemInput(func = detect_sentiment),
-    LlmFunctionItemInput(func = extract_keywords),
-    LlmFunctionItemInput(func = convert_units),
-    LlmFunctionItemInput(func = calculate_distance),
-    LlmFunctionItemInput(func = generate_plot),
-    LlmFunctionItemInput(func = currency_exchange),
-    LlmFunctionItemInput(func = store_file),
-    LlmFunctionItemInput(func = load_file),
-    LlmFunctionItemInput(func = send_sms),
-    LlmFunctionItemInput(func = detect_objects),
-    LlmFunctionItemInput(func = transcribe_audio),
-    LlmFunctionItemInput(func = generate_report),
-    LlmFunctionItemInput(func = lookup_coordinates),
-    LlmFunctionItemInput(func = check_availability),
-    LlmFunctionItemInput(func = create_order),
-    LlmFunctionItemInput(func = check_order_status),
-    LlmFunctionItemInput(func = upload_image),
-    LlmFunctionItemInput(func = rewrite_text),
-    LlmFunctionItemInput(func = get_weather),
-    LlmFunctionItemInput(func = send_report_email),
-    LlmFunctionItemInput(func = query_database),
-    LlmFunctionItemInput(func = query_web)
-])
-
-def run_workflow_plan(available_tools = available_tools, wa_class = WorkflowAutoAssembler, *args, **kwargs):
-
-    return run_wa(available_tools = available_tools,wa_class = wa_class,  *args, **kwargs)
-
-```
-
-### Example tasks
-
-
-```python
-from typing import List, Optional
-from pydantic import BaseModel, Field
-
-task_specs = {}
-task_tests = {}
-task_runs = {}
-```
-
-#### Task 1
-
-
-```python
 class Task1Input(BaseModel):
     text: str = Field(..., description="Text to translate.")
     target_language: str = Field(..., description="Target language code (e.g., 'fr').")
@@ -488,10 +373,6 @@ task_specs['task_1'] = {
         "output_model": Task1Output,
 }
 
-```
-
-
-```python
 t1_inputs = [
     Task1Input(text=t, target_language=lang)
     for t, lang in [
@@ -505,55 +386,18 @@ t1_outputs = [
     Task1Output(translated_text=f"Translated({i.text}) → {i.target_language}") for i in t1_inputs
 ]
 
-
-task_tests['task_1'] = {"inputs": t1_inputs,  "expected_outputs": t1_outputs}
 ```
 
+</details>
+
+
+#### 2. Summarize Document
+
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_1'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_1',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 10,
-     'frac_workflow_correct': 1.0,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': []}
-
-
-
-#### Task 2
-
-
-```python
 class Task2Input(BaseModel):
     content: str = Field(..., description="Text to summarize.")
 
@@ -565,62 +409,22 @@ task_specs['task_2'] = {
         "input_model": Task2Input,
         "output_model": Task2Output,
 }
-```
 
-
-```python
 t2_inputs = [Task2Input(content=f"Long text example #{i} ...") for i in range(1, 11)]
 t2_outputs = [Task2Output(summary="Short summary...") for _ in t2_inputs]
 
-task_tests['task_2'] = {"inputs": t2_inputs,  "expected_outputs": t2_outputs}
 ```
 
+</details>
+
+
+#### 3. Sentiment + Keywords
+
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_2'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_2',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 10,
-     'frac_workflow_correct': 1.0,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': []}
-
-
-
-#### Task 3
-
-
-```python
 class Task3Input(BaseModel):
     text: str = Field(..., description="Text to analyze.")
 
@@ -634,10 +438,8 @@ task_specs['task_3'] = {
         "input_model": Task3Input,
         "output_model": Task3Output,
     }
-```
 
 
-```python
 t3_inputs = [
     Task3Input(text=txt) for txt in [
         "I love this product!", "This is terrible.", "It's okay, I guess.",
@@ -649,55 +451,17 @@ t3_outputs = [
     Task3Output(sentiment="positive", score=0.9, keywords=["keyword1", "keyword2"]) for _ in t3_inputs
 ]
 
-task_tests['task_3'] = {"inputs": t3_inputs,  "expected_outputs": t3_outputs}
 ```
 
+</details>
+
+
+#### 4. Convert Units + SMS
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_3'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_3',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 10,
-     'frac_workflow_correct': 1.0,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': []}
-
-
-
-#### Task 4
-
-
-```python
 class Task4Input(BaseModel):
     value: float = Field(..., description="Numeric value to convert.")
     from_unit: str = Field(..., description="Source unit (e.g., 'C').")
@@ -713,10 +477,7 @@ task_specs['task_4'] = {
         "input_model": Task4Input,
         "output_model": Task4Output,
     }
-```
 
-
-```python
 t4_inputs = [
     Task4Input(value=v, from_unit="C", to_unit="F", phone=f"+15550000{i:02d}")
     for i, v in enumerate([0, 5, 10, 12.5, 15, 18, 20, 25, 30, 37], start=1)
@@ -726,55 +487,17 @@ t4_outputs = [
     Task4Output(converted_value=round(i.value * 1.3, 6), sms_sent=True) for i in t4_inputs
 ]
 
-task_tests['task_4'] = {"inputs": t4_inputs,  "expected_outputs": t4_outputs}
 ```
 
+</details>
+
+
+#### 5. Weather Report
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_4'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_4',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 9,
-     'frac_workflow_correct': 0.9,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': [5]}
-
-
-
-#### Task 5
-
-
-```python
 class Task5Input(BaseModel):
     city: str = Field(..., description="City name.")
     report_title: Optional[str] = Field("City Weather Report", description="Title for the report.")
@@ -791,10 +514,7 @@ task_specs['task_5'] = {
         "input_model": Task5Input,
         "output_model": Task5Output,
     }
-```
 
-
-```python
 t5_inputs = [
     Task5Input(city=c, report_title=f"{c} Weather Report")
     for c in ["Paris", "Berlin", "Warsaw", "Tokyo", "Sydney", "New York", "London", "Toronto", "Lisbon", "Rome"]
@@ -810,55 +530,18 @@ t5_outputs = [
     ) for _ in t5_inputs
 ]
 
-task_tests['task_5'] = {"inputs": t5_inputs,  "expected_outputs": t5_outputs}
 ```
 
+</details>
+
+
+#### 6. DB Query + Translate + Upload
+
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_5'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_5',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 10,
-     'frac_workflow_correct': 1.0,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': []}
-
-
-
-#### Task 6
-
-
-```python
 class Task6Input(BaseModel):
     topic: str = Field(..., description="Database topic to query.")
     target_language: str = Field(..., description="Language code for translation.")
@@ -876,10 +559,7 @@ task_specs['task_6'] = {
         "input_model": Task6Input,
         "output_model": Task6Output,
     }
-```
 
-
-```python
 t6_inputs = [
     Task6Input(topic=topic, target_language=lang, image_path=f"/images/{i}.png", label=f"doc-{i}")
     for i, (topic, lang) in enumerate([
@@ -892,61 +572,27 @@ t6_inputs = [
 # upload_image => url fixed
 t6_outputs = [
     Task6Output(
-        translated_info="Translated DB info...",
+        translated_info=f"Translated(Content extracted from the database for your query is ...) → {lang}",
         uid="0000",
         image_url="http://img.local",
-    ) for _ in t6_inputs
+    ) for _, (_, lang) in enumerate([
+        ("birds", "fr"), ("finance", "es"), ("weather", "de"), ("transport", "it"),
+        ("education", "pl"), ("sports", "ja"), ("technology", "ko"), ("health", "pt"),
+        ("energy", "ar"), ("tourism", "nl")
+    ], start=1)
 ]
 
-task_tests['task_6'] = {"inputs": t6_inputs,  "expected_outputs": t6_outputs}
 ```
 
+</details>
+
+
+#### 7. Transcribe + Summarize
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_6'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_6',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 0,
-     'frac_workflow_correct': 0.0,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
-
-
-
-#### Task 7
-
-
-```python
 class Task7Input(BaseModel):
     audio_path: str = Field(..., description="Path to meeting audio file.")
 
@@ -961,65 +607,24 @@ task_specs['task_7'] = {
         "input_model": Task7Input,
         "output_model": Task7Output,
     }
-```
 
-
-```python
 t7_inputs = [Task7Input(audio_path=f"/audio/meeting_{i}.wav") for i in range(1, 11)]
 t7_outputs = [
     Task7Output(transcript="Transcribed text", summary="Short summary...", sentiment="positive", score=0.9)
     for _ in t7_inputs
 ]
 
-task_tests['task_7'] = {"inputs": t7_inputs,  "expected_outputs": t7_outputs}
 ```
 
+</details>
+
+
+#### 8. Weather + Convert + PDF
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_7'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-
-
-
-    {'task': 'task_7',
-     'n_errors': 0,
-     'frac_errors': 0.0,
-     'failed_retries': [],
-     'n_workflow_possible': 10,
-     'frac_workflow_possible': 1.0,
-     'n_workflow_completed': 10,
-     'frac_workflow_completed': 1.0,
-     'n_workflow_correct': 10,
-     'frac_workflow_correct': 1.0,
-     'errors_idx': [],
-     'inpossible_workflows': [],
-     'incompleted_workflows': [],
-     'incorrect_workflows_idx': []}
-
-
-
-#### Task 8
-
-
-```python
 class Task8Input(BaseModel):
     city: str = Field(..., description="City for weather.")
     to_unit: str = Field("F", description="Target unit for temperature (e.g., 'F').")
@@ -1035,10 +640,7 @@ task_specs['task_8'] = {
         "input_model": Task8Input,
         "output_model": Task8Output,
     }
-```
 
-
-```python
 t8_inputs = [
     Task8Input(city=c, to_unit="F", report_title=f"{c} Weather Report")
     for c in ["Paris", "Berlin", "Warsaw", "Tokyo", "Sydney", "NYC", "London", "Toronto", "Lisbon", "Rome"]
@@ -1049,35 +651,17 @@ t8_outputs = [
     for _ in t8_inputs
 ]
 
-task_tests['task_8'] = {"inputs": t8_inputs,  "expected_outputs": t8_outputs}
 ```
 
+</details>
+
+
+#### 9. Web Search + Rewrite
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_8'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 9
-
-
-```python
 class Task9Input(BaseModel):
     search_input: str = Field(..., description="Web search query.")
     tone: str = Field("formal", description="Target tone for rewriting.")
@@ -1092,10 +676,7 @@ task_specs['task_9'] = {
         "input_model": Task9Input,
         "output_model": Task9Output,
     }
-```
 
-
-```python
 t9_inputs = [
     Task9Input(search_input=q, tone=tone)
     for q, tone in [
@@ -1110,40 +691,22 @@ t9_inputs = [
 t9_outputs = [
     Task9Output(
         keywords=["keyword1", "keyword2"],
-        rewritten=f"{i.tone} version of Short summary...",
-        sources=["Result 1", "Result 2"],
+        rewritten=f"{i.tone} version of {i.search_input}",
+        sources=["Relevant content found in first search result is ..."],
     ) for i in t9_inputs
 ]
 
-task_tests['task_9'] = {"inputs": t9_inputs,  "expected_outputs": t9_outputs}
 ```
 
+</details>
+
+
+#### 10. Image Objects + Email
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_9'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 10
-
-
-```python
 class Task10Input(BaseModel):
     image_path: str = Field(..., description="Path to image file.")
     city: str = Field(..., description="City where email should be sent.")
@@ -1155,14 +718,11 @@ class Task10Output(BaseModel):
     message: Optional[str] = Field(None, description="Email send message.")
 
 task_specs['task_10'] = {
-        "description": "Detect objects in photo, generate short summary text, send email.",
+        "description": "Detect objects in photo, generate short summary text, send email, leave message.",
         "input_model": Task10Input,
         "output_model": Task10Output,
     }
-```
 
-
-```python
 t10_inputs = [
     Task10Input(image_path=f"/img/photo_{i}.jpg", city=c, title="Photo Analysis")
     for i, c in enumerate(["Paris","Berlin","Warsaw","Tokyo","Sydney","NYC","London","Toronto","Lisbon","Rome"], 1)
@@ -1172,36 +732,18 @@ t10_outputs = [
     for _ in t10_inputs
 ]
 
-
-task_tests['task_10'] = {"inputs": t10_inputs,  "expected_outputs": t10_outputs}
 ```
 
+</details>
+
+
+#### 11. Distance + Currency + SMS
+
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_10'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 11
-
-
-```python
 class Task11Input(BaseModel):
     lat1: float
     lon1: float
@@ -1223,10 +765,6 @@ task_specs['task_11'] = {
         "output_model": Task11Output,
     }
 
-```
-
-
-```python
 t11_inputs = [
     Task11Input(
         lat1=52.2297, lon1=21.0122, lat2=48.8566, lon2=2.3522,
@@ -1240,35 +778,17 @@ t11_outputs = [
     for i in t11_inputs
 ]
 
-task_tests['task_11'] = {"inputs": t11_inputs,  "expected_outputs": t11_outputs}
 ```
 
+</details>
+
+
+#### 12. Summarize File + Email
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_11'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 12
-
-
-```python
 class Task12Input(BaseModel):
     path: str = Field(..., description="Path of text file to load.")
     out_filename: str = Field(..., description="Filename for stored summary.")
@@ -1284,10 +804,7 @@ task_specs['task_12'] = {
         "input_model": Task12Input,
         "output_model": Task12Output,
     }
-```
 
-
-```python
 t12_inputs = [
     Task12Input(path=f"/docs/file_{i}.txt", out_filename=f"summary_{i}.txt", city=c)
     for i, c in enumerate(["Paris","Berlin","Warsaw","Tokyo","Sydney","NYC","London","Toronto","Lisbon","Rome"], 1)
@@ -1298,35 +815,17 @@ t12_outputs = [
     for i in t12_inputs
 ]
 
-task_tests['task_12'] = {"inputs": t12_inputs,  "expected_outputs": t12_outputs}
 ```
 
+</details>
+
+
+#### 13. DB Stock + Order + Email
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_12'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 13
-
-
-```python
 class Task13Input(BaseModel):
     topic: str = Field(..., description="Topic to query from DB.")
     item_id: str = Field(..., description="Item identifier for stock/order.")
@@ -1346,10 +845,8 @@ task_specs['task_13'] = {
         "input_model": Task13Input,
         "output_model": Task13Output,
     }
-```
 
 
-```python
 t13_inputs = [
     Task13Input(
         topic=tpc, item_id=f"SKU-{1000+i}", quantity=q, location=loc, city=city
@@ -1367,35 +864,17 @@ t13_outputs = [
     for _ in t13_inputs
 ]
 
-task_tests['task_13'] = {"inputs": t13_inputs,  "expected_outputs": t13_outputs}
 ```
 
+</details>
+
+
+#### 14. Distance Plot
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_13'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 14
-
-
-```python
 class Task14Input(BaseModel):
     city_a: str = Field(..., description="First city.")
     city_b: str = Field(..., description="Second city.")
@@ -1414,10 +893,7 @@ task_specs['task_14'] = {
         "input_model": Task14Input,
         "output_model": Task14Output,
     }
-```
 
-
-```python
 t14_inputs = [
     Task14Input(city_a=a, city_b=b, title="Distance Plot")
     for a, b in [
@@ -1431,35 +907,17 @@ t14_outputs = [
     for _ in t14_inputs
 ]
 
-task_tests['task_14'] = {"inputs": t14_inputs,  "expected_outputs": t14_outputs}
 ```
 
+</details>
+
+
+#### 15. Web Sentiment Summary
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_14'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 15
-
-
-```python
 class Task15Input(BaseModel):
     search_input: str = Field(..., description="Query for web search.")
     rewrite_tone: str = Field("concise", description="Tone for rewritten text.")
@@ -1477,10 +935,7 @@ task_specs['task_15'] = {
         "input_model": Task15Input,
         "output_model": Task15Output,
     }
-```
 
-
-```python
 t15_inputs = [
     Task15Input(search_input=q, rewrite_tone=tone)
     for q, tone in [
@@ -1500,35 +955,18 @@ t15_outputs = [
     for i in t15_inputs
 ]
 
-task_tests['task_15'] = {"inputs": t15_inputs,  "expected_outputs": t15_outputs}
 ```
 
+</details>
+
+
+#### 16. Weather + Audio + Report
+
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_15'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 16
-
-
-```python
 class Task16Input(BaseModel):
     city: str = Field(..., description="City name.")
     audio_path: str = Field(..., description="Path to instructions audio.")
@@ -1548,10 +986,7 @@ task_specs['task_16'] = {
         "input_model": Task16Input,
         "output_model": Task16Output,
     }
-```
 
-
-```python
 t16_inputs = [
     Task16Input(city=c, audio_path=f"/audio/instructions_{i}.wav", report_title="City Ops Report")
     for i, c in enumerate(["Paris","Berlin","Warsaw","Tokyo","Sydney","NYC","London","Toronto","Lisbon","Rome"], 1)
@@ -1562,35 +997,17 @@ t16_outputs = [
     for _ in t16_inputs
 ]
 
-task_tests['task_16'] = {"inputs": t16_inputs,  "expected_outputs": t16_outputs}
 ```
 
+</details>
+
+
+#### 17. DB + Distance + Report
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_16'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 17
-
-
-```python
 class Task17Input(BaseModel):
     topic: str = Field(..., description="DB topic to query.")
     lat1: float
@@ -1614,10 +1031,7 @@ task_specs['task_17'] = {
         "input_model": Task17Input,
         "output_model": Task17Output,
     }
-```
 
-
-```python
 t17_inputs = [
     Task17Input(
         topic="infrastructure",
@@ -1633,35 +1047,17 @@ t17_outputs = [
     for _ in t17_inputs
 ]
 
-task_tests['task_17'] = {"inputs": t17_inputs,  "expected_outputs": t17_outputs}
 ```
 
+</details>
+
+
+#### 18. Call Summary + Order
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_17'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 18
-
-
-```python
 class Task18Input(BaseModel):
     audio_path: str
     item_id: str
@@ -1683,10 +1079,7 @@ task_specs['task_18'] = {
         "input_model": Task18Input,
         "output_model": Task18Output,
     }
-```
 
-
-```python
 t18_inputs = [
     Task18Input(
         audio_path=f"/audio/call_{i}.wav", item_id=f"SKU-{2000+i}", quantity=(i % 5) + 1,
@@ -1701,35 +1094,17 @@ t18_outputs = [
     for i in t18_inputs
 ]
 
-task_tests['task_18'] = {"inputs": t18_inputs,  "expected_outputs": t18_outputs}
 ```
 
+</details>
+
+
+#### 19. Web Summary + Report
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_18'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 19
-
-
-```python
 class Task19Input(BaseModel):
     search_input: str
     rewrite_tone: str = Field("formal", description="Tone for rewritten copy.")
@@ -1752,10 +1127,7 @@ task_specs['task_19'] = {
         "input_model": Task19Input,
         "output_model": Task19Output,
     }
-```
 
-
-```python
 t19_inputs = [
     Task19Input(
         search_input=q, rewrite_tone="formal", amount=amt,
@@ -1775,35 +1147,18 @@ t19_outputs = [
     for i in t19_inputs
 ]
 
-task_tests['task_19'] = {"inputs": t19_inputs,  "expected_outputs": t19_outputs}
 ```
 
+</details>
+
+
+#### 20. Full Pipeline Showcase
+
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_19'
-
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
-
-
-task_runs[task] = await asyncio.gather(*reqs)
-
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
-```
-
-#### Task 20
-
-
-```python
 class Task20Input(BaseModel):
     db_topic: str = Field(..., description="Topic for DB query.")
     web_query: str = Field(..., description="Query for web search.")
@@ -1855,10 +1210,7 @@ task_specs['task_20'] = {
         "input_model": Task20Input,
         "output_model": Task20Output,
     }
-```
 
-
-```python
 t20_inputs = [
     Task20Input(
         db_topic="urban planning",
@@ -1890,27 +1242,227 @@ t20_outputs = [
     for i in t20_inputs
 ]
 
-task_tests['task_20'] = {"inputs": t20_inputs,  "expected_outputs": t20_outputs}
 ```
 
+</details>
+
+
+> Note: Tasks 21–25 are examples that should **not** work with the provided example tools list.
+
+#### 21. DB Summary + Notify
+
+<details>
 
 ```python
-import asyncio
 
-task = 'task_20'
+class Task21Input(BaseModel):
+    db_topic: str = Field(..., description="Topic for DB query.")
+    phone: str = Field(..., description="Phone number to notify.")
+    report_title: str = Field("Summary Report", description="Report title.")
+    city: str = Field("Berlin", description="City for report email.")
 
-reqs = [run_workflow_plan(
-    task_description = task_specs[task]['description'],
-    input_model = task_specs[task]['input_model'],
-    output_model = task_specs[task]['output_model'],
-    test_inputs = inp
-) for idx, inp in enumerate(task_tests[task]["inputs"])]
+class Task21Output(BaseModel):
+    summary: str
+    sms_sent: bool
+    email_sent: bool
+    db_uid: str
+    db_write_uid: str
 
 
-task_runs[task] = await asyncio.gather(*reqs)
+task_specs['task_21'] = {
+        "description": (
+            "Query database -> summarize -> send SMS -> send email -> save summary to DB."
+        ),
+        "input_model": Task21Input,
+        "output_model": Task21Output,
+    }
 
-check_workflow_plans(
-    task_name=task, 
-    results=task_runs[task], 
-    expected_results=task_tests[task]["expected_outputs"])
+t21_inputs = [
+    Task21Input(db_topic=f"topic-{i}", phone=f"+1555000{i:02d}")
+    for i in range(1, 6)
+]
+
+t21_outputs = [
+    Task21Output(
+        summary="Short summary...",
+        sms_sent=True,
+        email_sent=True,
+        db_uid="0000",
+        db_write_uid="WRITE-0000",
+    ) for _ in t21_inputs
+]
+
+
 ```
+
+</details>
+
+
+#### 22. OCR Image
+
+
+<details>
+
+```python
+
+class Task22Input(BaseModel):
+    image_path: str
+    label: str
+
+class Task22Output(BaseModel):
+    ocr_text: str
+    image_url: str
+
+
+task_specs['task_22'] = {
+        "description": (
+            "Upload image -> extract text from image (OCR)."
+        ),
+        "input_model": Task22Input,
+        "output_model": Task22Output,
+    }
+
+t22_inputs = [
+    Task22Input(image_path=f"/img/doc_{i}.png", label=f"doc-{i}")
+    for i in range(1, 6)
+]
+
+t22_outputs = [
+    Task22Output(
+        ocr_text="Detected text...",
+        image_url="http://img.local",
+    ) for _ in t22_inputs
+]
+
+
+```
+
+</details>
+
+
+#### 23. Embedding + Index
+
+
+<details>
+
+```python
+
+class Task23Input(BaseModel):
+    text: str
+    top_k: int = Field(5, description="Number of nearest neighbors.")
+
+class Task23Output(BaseModel):
+    embedding: List[float]
+    index_id: str
+
+
+task_specs['task_23'] = {
+        "description": (
+            "Generate embedding -> store in vector index -> return index id."
+        ),
+        "input_model": Task23Input,
+        "output_model": Task23Output,
+    }
+
+t23_inputs = [
+    Task23Input(text=f"sample text {i}")
+    for i in range(1, 6)
+]
+
+t23_outputs = [
+    Task23Output(
+        embedding=[0.1, 0.2, 0.3],
+        index_id="vec-0000",
+    ) for _ in t23_inputs
+]
+
+
+```
+
+</details>
+
+
+#### 24. Contract Compliance
+
+
+<details>
+
+```python
+
+class Task24Input(BaseModel):
+    contract_text: str
+    region: str = Field("EU", description="Compliance region.")
+
+class Task24Output(BaseModel):
+    compliance_report: str
+    risk_score: float
+
+
+task_specs['task_24'] = {
+        "description": (
+            "Analyze contract -> run compliance check -> return report and risk score."
+        ),
+        "input_model": Task24Input,
+        "output_model": Task24Output,
+    }
+
+t24_inputs = [
+    Task24Input(contract_text=f"contract text {i}")
+    for i in range(1, 6)
+]
+
+t24_outputs = [
+    Task24Output(
+        compliance_report="No issues found.",
+        risk_score=0.1,
+    ) for _ in t24_inputs
+]
+
+
+```
+
+</details>
+
+
+#### 25. Crypto Transfer
+
+
+<details>
+
+```python
+
+class Task25Input(BaseModel):
+    wallet_from: str
+    wallet_to: str
+    amount: float
+
+class Task25Output(BaseModel):
+    tx_hash: str
+    receipt_url: str
+
+
+task_specs['task_25'] = {
+        "description": (
+            "Transfer crypto -> return transaction hash and receipt URL."
+        ),
+        "input_model": Task25Input,
+        "output_model": Task25Output,
+    }
+
+t25_inputs = [
+    Task25Input(wallet_from=f"0xFROM{i}", wallet_to=f"0xTO{i}", amount=1.5 + i)
+    for i in range(1, 6)
+]
+
+t25_outputs = [
+    Task25Output(
+        tx_hash="0xHASH",
+        receipt_url="http://chain.local/tx/0xHASH",
+    ) for _ in t25_inputs
+]
+
+
+```
+
+</details>
+

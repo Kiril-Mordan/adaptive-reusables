@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "workflow-auto-assembler"
+version = "0.0.1"
+description = "Experimental schema-first workflow synthesis tool for assembling simple typed workflows from existing functions."
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["aa-paa-tool"]
+classifiers = ["Development Status :: 3 - Alpha"]
+dependencies = ["attrs", "attrsx", "pydantic", "pyyaml"]
+authors = [{ name = "Kyrylo Mordan", email = "parachute.repo@gmail.com" }]
+license = { text = "apache-2.0" }
+
+[project.optional-dependencies]
+"ollama" = ["ollama"]
+"openai" = ["openai"]
+"all" = ["ollama", "openai"]
+
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE"]

@@ -121,14 +121,14 @@ planned_workflow_obj.workflow
 
 
 
-    [{'name': 'query_database', 'args': {'topic': 'birds'}},
+    [{'name': 'query_database', 'args': {'topic': 'birds', 'location': 'Berlin'}},
      {'name': 'get_weather', 'args': {'city': 'Berlin'}},
      {'name': 'send_report_email',
       'args': {'city': 'Berlin',
-       'information': [{'title': 'Bird information',
+       'information': [{'title': 'Bird Information',
          'content': 'source: query_database.output.info'},
         {'title': 'Weather',
-         'content': 'source: get_weather.output.condition, source: get_weather.output.temperature'}]}}]
+         'content': 'Condition: source: get_weather.output.condition, Temperature: source: get_weather.output.temperature°C'}]}}]
 
 
 
@@ -151,14 +151,16 @@ planned_workflow_obj_a.workflow
 
 
 
-    [{'name': 'query_database',
-      'args': {'topic': 'birds', 'location': 'source: input_model.output.city'}},
+    [{'name': 'query_database', 'args': {'topic': 'birds'}},
      {'name': 'get_weather', 'args': {'city': 'source: input_model.output.city'}},
      {'name': 'send_report_email',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Birds Info',
+       'information': [{'title': 'Bird Information',
          'content': 'source: query_database.output.info'},
-        {'title': 'Weather', 'content': 'source: get_weather.output.condition'}]}}]
+        {'title': 'Weather Condition',
+         'content': 'source: get_weather.output.condition'},
+        {'title': 'Temperature (C)',
+         'content': 'source: get_weather.output.temperature'}]}}]
 
 
 
@@ -183,24 +185,27 @@ planned_workflow_obj_b = await wp.generate_workflow(
 planned_workflow_obj_b.workflow
 ```
 
+    DEBUG:WorkflowPlanner:Reset caused by PLANNING_OUTPUT_MODEL type error!
+    DEBUG:WorkflowPlanner:Attempt: 1
 
 
 
-    [{'name': 'query_database',
-      'args': {'topic': 'birds', 'location': 'source: input_model.output.city'}},
+
+
+    [{'name': 'query_database', 'args': {'topic': 'birds'}},
      {'name': 'get_weather', 'args': {'city': 'source: input_model.output.city'}},
      {'name': 'send_report_email',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Birds Information',
+       'information': [{'title': 'Birds',
          'content': 'source: query_database.output.info'},
-        {'title': 'Current Weather',
-         'content': 'source: get_weather.output.condition'}]}},
+        {'title': 'Weather',
+         'content': 'Condition: source: get_weather.output.condition, Temperature: source: get_weather.output.temperature'}]}},
      {'name': 'output_model',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Birds Information',
+       'information': [{'title': 'Birds',
          'content': 'source: query_database.output.info'},
-        {'title': 'Current Weather',
-         'content': 'source: get_weather.output.condition'}]}}]
+        {'title': 'Weather',
+         'content': 'Condition: source: get_weather.output.condition, Temperature: source: get_weather.output.temperature'}]}}]
 
 
 
@@ -225,7 +230,6 @@ class GetWeatherOutput(BaseModel):
 
 def get_weather(inputs: GetWeatherInput) -> GetWeatherOutput:
     """Get the current weather for a city from weather forcast api."""
-    error
     return GetWeatherOutput(
         condition = "Sunny",
         temperature = 20,
@@ -285,7 +289,8 @@ planned_workflow_obj_tb = await wp2.generate_workflow(planned_workflow = planned
 
 ```
 
-    DEBUG:WorkflowPlanner:Attempt: 1
+    DEBUG:WorkflowPlanner:Reset caused by RUNNER type error!
+    DEBUG:WorkflowPlanner:Attempt: 2
 
 
 
@@ -296,22 +301,21 @@ planned_workflow_obj_tb.workflow
 
 
 
-    [{'name': 'query_database',
-      'args': {'topic': 'birds', 'location': 'source: input_model.output.city'}},
+    [{'name': 'query_database', 'args': {'topic': 'birds'}},
      {'name': 'get_weather_report',
       'args': {'city': 'source: input_model.output.city'}},
      {'name': 'send_report_email',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Birds Information',
+       'information': [{'title': 'Birds',
          'content': 'source: query_database.output.info'},
-        {'title': 'Current Weather',
-         'content': 'source: get_weather_report.output.condition'}]}},
+        {'title': 'Weather',
+         'content': 'Condition: source: get_weather_report.output.condition, Temperature: source: get_weather_report.output.temperature'}]}},
      {'name': 'output_model',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Birds Information',
+       'information': [{'title': 'Birds',
          'content': 'source: query_database.output.info'},
-        {'title': 'Current Weather',
-         'content': 'source: get_weather_report.output.condition'}]}}]
+        {'title': 'Weather',
+         'content': 'Condition: source: get_weather_report.output.condition, Temperature: source: get_weather_report.output.temperature'}]}}]
 
 
 
@@ -342,6 +346,7 @@ planned_workflow_obj_b3 = WorkflowPlannerResponse(
    'content': '## Role\nYou are a Workflow Agent tasked with creating a complete workflow for a given task.  Your workflow must be constructed solely from calls to the functions provided. Each workflow should be represented as a JSON list, where each element is an object representing a single function call. For any function input that is meant to be filled using the output of a previous step rather than provided directly, indicate this using the format: "source: <previous_function_name>.output.<field_name>".\n\n## Output Requirements\n- **Respond ONLY with valid JSON** — specifically, an **array** of objects. - **Do NOT** provide any additional commentary, explanations, or text outside this JSON array. - Each object in the array must represent **one tool call**, with **exactly** the following fields:\n  1. `"name"` (string) - the tool\'s name from the list below.\n  2. `"args"` (object) - any arguments the tool requires.\n- **Important:** If a function argument is intended to be sourced from a previous step\'s output, indicate this using the format: "source: <previous_function_name>.output.<field_name>".\n  \n### Expected Format\n[\n  {\n    "name": "function_name_1",\n    "args": {}\n  },\n  ...,\n  {\n    "name": "function_name_n",\n    "args": {"arg1": "value for arg1"}\n  }\n]\n\n## Available functions\nBelow is the list of available functions that you can use to build your workflow. Each function is defined by its name, a description, and a JSON schema for its parameters. For example, the function list is as follows:\n[{"name": "get_weather", "description": "Get the current weather for a city from weather forcast api.", "input_schema_json": {"properties": {"city": {"description": "Name of the city for which weather to be extracted.", "title": "City", "type": "string"}}, "required": ["city"], "title": "GetWeatherInput", "type": "object"}, "output_schema_json": {"properties": {"condition": {"description": "Weather condition in the requested city.", "title": "Condition", "type": "string"}, "temperature": {"description": "Termperature in C in the requested city.", "title": "Temperature", "type": "number"}, "humidity": {"default": null, "description": "Name of the city for which weather to be extracted.", "title": "Humidity", "type": "number"}}, "required": ["condition", "temperature"], "title": "GetWeatherOutput", "type": "object"}}, {"name": "send_report_email", "description": "Sends a report email with given information points to a city.", "input_schema_json": {"$defs": {"EmailInformationPoint": {"properties": {"title": {"default": null, "description": "Few word description of the information.", "title": "Title", "type": "string"}, "content": {"description": "Content of the information.", "title": "Content", "type": "string"}}, "required": ["content"], "title": "EmailInformationPoint", "type": "object"}}, "properties": {"city": {"description": "Name of the city where report will be send.", "title": "City", "type": "string"}, "information": {"items": {"$ref": "#/$defs/EmailInformationPoint"}, "title": "Information", "type": "array"}}, "required": ["city", "information"], "title": "SendReportEmailInput", "type": "object"}, "output_schema_json": {"properties": {"email_sent": {"description": "Conformation that email was send successfully.", "title": "Email Sent", "type": "boolean"}, "message": {"default": null, "description": "Optional comments from the process.", "title": "Message", "type": "string"}}, "required": ["email_sent"], "title": "SendReportEmailOutput", "type": "object"}}, {"name": "query_database", "description": "Get information from the database with provided filters.", "input_schema_json": {"properties": {"topic": {"description": "Topic of a requested piece of information.", "title": "Topic", "type": "string"}, "location": {"default": null, "description": "Filter for location name.", "title": "Location", "type": "string"}, "uid": {"default": null, "description": "Filter for unique indentifier of the database item.", "title": "Uid", "type": "string"}}, "required": ["topic"], "title": "QueryDatabaseInput", "type": "object"}, "output_schema_json": {"properties": {"info": {"description": "Content of the information.", "title": "Info", "type": "string"}, "uid": {"default": null, "description": "Unique indentifier of the database item.", "title": "Uid", "type": "string"}}, "required": ["info"], "title": "QueryDatabaseOutput", "type": "object"}}]\n\n'},
   {'role': 'user',
    'content': 'Query database to find information on birds and get latest weather for the city, then send an email there.\n--- The following is the expected input model for the workflow, reference values from it if necessesary, given the task with  format "source: input_model.output.<field_name>". \n{\'properties\': {\'city\': {\'description\': \'Name of the city for which weather to be extracted.\', \'title\': \'City\', \'type\': \'string\'}}, \'required\': [\'city\'], \'title\': \'WfInputs\', \'type\': \'object\'}\n---\n\n--- The following is the expected output model for the workflow, outputs from functions selected in the workflow should  be able to populate its fields, given the task with format "source: <previous_workflow_step>.output.<field_name>" or "source: input_model.output.<field_name>". \n{\'$defs\': {\'EmailInformationPoint\': {\'properties\': {\'title\': {\'default\': None, \'description\': \'Few word description of the information.\', \'title\': \'Title\', \'type\': \'string\'}, \'content\': {\'description\': \'Content of the information.\', \'title\': \'Content\', \'type\': \'string\'}}, \'required\': [\'content\'], \'title\': \'EmailInformationPoint\', \'type\': \'object\'}}, \'properties\': {\'city\': {\'description\': \'Name of the city for which weather was extracted.\', \'title\': \'City\', \'type\': \'string\'}, \'information\': {\'default\': [], \'description\': \'Information sent via email.\', \'items\': {\'$ref\': \'#/$defs/EmailInformationPoint\'}, \'title\': \'Information\', \'type\': \'array\'}}, \'required\': [\'city\'], \'title\': \'WfOutputs\', \'type\': \'object\'}\n---\n\n'}],
+ 'additional_messages': [],
  'errors': []}
 )
 ```
@@ -367,12 +372,18 @@ wp3 = WorkflowPlanner(
 
 
 planned_workflow_obj_b3.errors.append(planning_error)
+planned_workflow_obj_b3.additional_messages = []
 
-planned_workflow_obj_tb3 = await wp3.generate_workflow(planned_workflow = planned_workflow_obj_b3)
+planned_workflow_obj_tb3 = await wp3.generate_workflow(planned_workflow = planned_workflow_obj_b3, output_model = WfOutputs)
 ```
 
+    DEBUG:WorkflowPlanner:Reset caused by PLANNING_HF type error!
     DEBUG:WorkflowPlanner:Attempt: 1
+
+
+    DEBUG:WorkflowPlanner:Reset caused by PLANNING_MISSOUTPUT type error!
     DEBUG:WorkflowPlanner:Attempt: 2
+    DEBUG:WorkflowPlanner:Reset caused by PLANNING_OUTPUT_MODEL type error!
     DEBUG:WorkflowPlanner:Attempt: 3
 
 
@@ -388,19 +399,14 @@ planned_workflow_obj_tb3.workflow
      {'name': 'get_weather', 'args': {'city': 'source: input_model.output.city'}},
      {'name': 'send_report_email',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Weather Condition',
-         'content': 'source: get_weather.output.condition'},
-        {'title': 'Temperature',
-         'content': 'source: get_weather.output.temperature'},
-        {'title': 'Birds Info',
-         'content': 'source: query_database.output.info'}]}},
+       'information': [{'title': 'Bird Information',
+         'content': 'source: query_database.output.info'},
+        {'title': 'Weather', 'content': 'source: get_weather.output.condition'}]}},
      {'name': 'output_model',
       'args': {'city': 'source: input_model.output.city',
-       'information': [{'title': 'Weather Condition',
-         'content': 'source: get_weather.output.condition'},
-        {'title': 'Temperature',
-         'content': 'source: get_weather.output.temperature'},
-        {'title': 'Birds Info',
-         'content': 'source: query_database.output.info'}]}}]
+       'information': [{'title': 'Bird Information',
+         'content': 'source: query_database.output.info'},
+        {'title': 'Weather Condition',
+         'content': 'source: get_weather.output.condition'}]}}]
 
 

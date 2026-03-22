@@ -145,7 +145,14 @@ adapted_workflow_obj = await wa.adapt_workflow(
 adapted_workflow_obj.workflow
 ```
 
+    DEBUG:WorkflowAdaptor:Adapting all steps!
+    DEBUG:WorkflowAdaptor:Reset caused by ADAPTOR_JSON type error!
     DEBUG:WorkflowAdaptor:Attempt for send_report_email: 1
+    DEBUG:WorkflowAdaptor:Reset caused by ADAPTOR_JSON type error!
+    DEBUG:WorkflowAdaptor:Attempt for send_report_email: 2
+    DEBUG:WorkflowAdaptor:Reset caused by ADAPTOR_JSON type error!
+    DEBUG:WorkflowAdaptor:Attempt for send_report_email: 3
+    DEBUG:WorkflowAdaptor:All steps were initially adapted!
     DEBUG:InputCollector:og_leaves : {'[0].args.topic': 'birds', '[1].args.city': 'Berlin', '[2].args.city': 'Berlin', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': 'source: query_database.output.info', '[2].args.information[1].title': 'Current Weather Condition', '[2].args.information[1].content': 'source: get_weather.output.condition', '[2].args.information[2].title': 'Temperature (C)', '[2].args.information[2].content': 'source: get_weather.output.temperature'}
     DEBUG:InputCollector:mod_leaves : {'[0].id': '1', '[0].func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac', '[0].args.topic': 'birds', '[1].id': '2', '[1].func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a', '[1].args.city': 'Berlin', '[2].id': '3', '[2].func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a', '[2].args.city': 'Berlin', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': '1.output.info', '[2].args.information[1].title': 'Current Weather Condition', '[2].args.information[1].content': '2.output.condition'}
     DEBUG:InputCollector:ic_results : ['literal', 'literal', 'literal', 'literal', 'reference', 'literal', 'reference', 'literal', 'reference']
@@ -197,6 +204,8 @@ adapted_workflow_obj_a = await wa.adapt_workflow(
 adapted_workflow_obj_a.workflow
 ```
 
+    DEBUG:WorkflowAdaptor:Adapting all steps!
+    DEBUG:WorkflowAdaptor:All steps were initially adapted!
     DEBUG:InputCollector:og_leaves : {'[0].args.topic': 'birds', '[1].args.city': 'source: input_model.output.city', '[2].args.city': 'source: input_model.output.city', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': 'source: query_database.output.info', '[2].args.information[1].title': 'Weather', '[2].args.information[1].content': 'source: get_weather.output.condition'}
     DEBUG:InputCollector:mod_leaves : {'[0].id': '1', '[0].func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac', '[0].args.topic': 'birds', '[1].id': '2', '[1].func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a', '[1].args.city': '0.output.city', '[2].id': '3', '[2].func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a', '[2].args.city': '0.output.city', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': '1.output.info', '[2].args.information[1].title': 'Weather', '[2].args.information[1].content': '2.output.condition'}
     DEBUG:InputCollector:ic_results : ['literal', 'reference', 'reference', 'literal', 'reference', 'literal', 'reference']
@@ -258,6 +267,8 @@ adapted_workflow_obj_b = await wa.adapt_workflow(
 adapted_workflow_obj_b.workflow
 ```
 
+    DEBUG:WorkflowAdaptor:Adapting all steps!
+    DEBUG:WorkflowAdaptor:All steps were initially adapted!
     DEBUG:InputCollector:og_leaves : {'[0].args.topic': 'birds', '[1].args.city': 'source: input_model.output.city', '[2].args.city': 'source: input_model.output.city', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': 'source: query_database.output.info', '[2].args.information[1].title': 'Weather', '[2].args.information[1].content': 'source: get_weather.output.condition', '[3].args.city': 'source: input_model.output.city', '[3].args.information[0].title': 'Birds Information', '[3].args.information[0].content': 'source: query_database.output.info', '[3].args.information[1].title': 'Weather', '[3].args.information[1].content': 'source: get_weather.output.condition', '[4].id': '5'}
     DEBUG:InputCollector:mod_leaves : {'[0].id': '1', '[0].func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac', '[0].args.topic': 'birds', '[1].id': '2', '[1].func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a', '[1].args.city': '0.output.city', '[2].id': '3', '[2].func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a', '[2].args.city': '0.output.city', '[2].args.information[0].title': 'Birds Information', '[2].args.information[0].content': '1.output.info', '[2].args.information[1].title': 'Weather', '[2].args.information[1].content': '2.output.condition', '[3].id': '4', '[3].func_id': '16a96f6083291385531909618374913abd08df9c4b3bbe0ac81969ae7856887f', '[3].args.city': '0.output.city', '[3].args.information[0].title': 'Birds Information', '[3].args.information[0].content': '1.output.info', '[3].args.information[1].title': 'Weather', '[3].args.information[1].content': '2.output.condition'}
     DEBUG:InputCollector:ic_results : ['literal', 'reference', 'reference', 'literal', 'reference', 'literal', 'reference', 'reference', 'literal', 'reference', 'literal', 'reference', 'literal']
@@ -338,6 +349,11 @@ adapted_workflow_obj_b4_reset = await wa.adapt_workflow(
     adapted_workflow = adapted_workflow_obj_b4,
 )
 ```
+
+    DEBUG:WorkflowAdaptor:Reset caused by ADAPTOR_JSON type error!
+    DEBUG:WorkflowAdaptor:Reset caused by ADAPTOR_JSON type error!
+    DEBUG:WorkflowAdaptor:Attempt for get_weather: 1
+
 
 
 ```python

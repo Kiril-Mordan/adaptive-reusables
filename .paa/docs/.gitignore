@@ -1,0 +1,12 @@
+# Ignore everything by default
+*
+
+# Allow markdown files
+!*.md
+
+# Allow PNG image files
+!*.png
+
+# Allow traversal into subdirectories
+!**/              
+                

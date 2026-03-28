@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../core_ideas/">
       
       
-        <link rel="next" href="../workflow_cache/">
+        <link rel="next" href="../reset_logic/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Release notes - Workflow auto assembler</title>
+        <title>Workflow cache - Workflow auto assembler</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#release-notes" class="md-skip">
+        <a href="#workflow-cache" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Release notes
+              Workflow cache
             
           </span>
         </div>
@@ -270,30 +270,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Release notes
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../release-notes/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -302,44 +282,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#010" class="md-nav__link">
-    <span class="md-ellipsis">
-      0.1.0
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#001" class="md-nav__link">
-    <span class="md-ellipsis">
-      0.0.1
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -383,10 +325,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../workflow_cache/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Workflow cache
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -395,6 +357,107 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-cache-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why Cache Workflows
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow Identity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-reuse-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Two Reuse Layers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage Layout
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latest-vs-latest-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      Latest vs Latest Complete
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actualize_workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      actualize_workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#force-replanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Force Replanning
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#incomplete-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      Incomplete Workflows
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      Practical Use
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -598,17 +661,19 @@
       
   
   
+    
   
   
+  
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -622,7 +687,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Concepts
@@ -654,10 +719,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../workflow_cache/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Workflow cache
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -666,6 +751,107 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-cache-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why Cache Workflows
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workflow Identity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-reuse-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Two Reuse Layers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage Layout
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latest-vs-latest-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      Latest vs Latest Complete
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actualize_workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      actualize_workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#force-replanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Force Replanning
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#incomplete-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      Incomplete Workflows
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      Practical Use
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -726,18 +912,81 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#010" class="md-nav__link">
+  <a href="#why-cache-workflows" class="md-nav__link">
     <span class="md-ellipsis">
-      0.1.0
+      Why Cache Workflows
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#001" class="md-nav__link">
+  <a href="#workflow-identity" class="md-nav__link">
     <span class="md-ellipsis">
-      0.0.1
+      Workflow Identity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#two-reuse-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Two Reuse Layers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage Layout
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latest-vs-latest-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      Latest vs Latest Complete
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actualize_workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      actualize_workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#force-replanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Force Replanning
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#incomplete-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      Incomplete Workflows
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      Practical Use
     </span>
   </a>
   
@@ -761,17 +1010,86 @@
   
 
 
-<h1 id="release-notes">Release notes</h1>
-<h3 id="010">0.1.0</h3>
-<pre><code>- Initial workflow cache storage
-
-- actualize_workflow function that utilizes cache, planning and runnning seamlessly
-</code></pre>
-<h3 id="001">0.0.1</h3>
-<pre><code>- docs cleaning in preparation for first release
-
-- updated reset logic
-</code></pre>
+<h1 id="workflow-cache">Workflow Cache</h1>
+<p>This page explains how Workflow Auto Assembler reuses previously planned workflows through in-memory cache and filesystem storage.</p>
+<h2 id="why-cache-workflows">Why Cache Workflows</h2>
+<p>Planning a workflow can involve:</p>
+<ul>
+<li>initial feasibility checking</li>
+<li>planner calls</li>
+<li>adaptor calls</li>
+<li>optional test-driven repair loops</li>
+</ul>
+<p>If the same task and I/O schemas are used again, WAA can often reuse an already assembled workflow instead of planning from scratch.</p>
+<h2 id="workflow-identity">Workflow Identity</h2>
+<p>WAA computes a stable <code>input_id</code> from:</p>
+<ul>
+<li><code>task_description</code></li>
+<li><code>input_model</code></li>
+<li><code>output_model</code></li>
+</ul>
+<p>This hash is used as the lookup key for workflow reuse.</p>
+<h2 id="two-reuse-layers">Two Reuse Layers</h2>
+<p>WAA uses two reuse layers:</p>
+<ul>
+<li><strong>In-memory cache</strong>: <code>storage_h.workflow_cache</code></li>
+<li><strong>Filesystem storage</strong>: saved workflow JSON files under <code>workflows/</code></li>
+</ul>
+<p>The in-memory cache is the fastest path inside a running process. Filesystem storage makes workflows reusable across sessions.</p>
+<h2 id="storage-layout">Storage Layout</h2>
+<p>Workflows are saved under:</p>
+<ul>
+<li><code>&lt;storage_path&gt;/workflows/</code></li>
+</ul>
+<p>Each saved workflow uses the filename pattern:</p>
+<ul>
+<li><code>&lt;input_id&gt;_&lt;workflow_id&gt;_&lt;timestamp&gt;.json</code></li>
+</ul>
+<p>This keeps workflow history append-only and allows WAA to search for the newest reusable workflow for a given <code>input_id</code>.</p>
+<h2 id="latest-vs-latest-complete">Latest vs Latest Complete</h2>
+<p>When loading workflows by <code>input_id</code>, WAA can:</p>
+<ul>
+<li>load the newest workflow of any status</li>
+<li>load the newest <strong>completed</strong> workflow</li>
+</ul>
+<p>For completed lookup, WAA checks saved candidates from newest to oldest and returns the first one where <code>workflow_completed == True</code>.</p>
+<p>This matters because newer workflow attempts may exist but still be incomplete or failed.</p>
+<h2 id="actualize_workflow"><code>actualize_workflow</code></h2>
+<p><code>actualize_workflow</code> is the high-level reuse entrypoint.</p>
+<p>Its normal behavior is:</p>
+<ol>
+<li>Compute <code>input_id</code></li>
+<li>Check in-memory cache</li>
+<li>If missing, check storage for the latest completed workflow</li>
+<li>If still missing, plan a new workflow</li>
+<li>Save the new workflow to storage</li>
+<li>Cache it</li>
+<li>Run it</li>
+<li>Return outputs</li>
+</ol>
+<p>So the same function handles both:</p>
+<ul>
+<li>first-time planning</li>
+<li>later workflow reuse</li>
+</ul>
+<h2 id="force-replanning">Force Replanning</h2>
+<p>If you want to ignore existing cache and storage reuse, call:</p>
+<ul>
+<li><code>actualize_workflow(..., force_replan=True)</code></li>
+</ul>
+<p>This skips the reuse lookup path and creates a fresh workflow plan.</p>
+<h2 id="incomplete-workflows">Incomplete Workflows</h2>
+<p>If a workflow object has <code>workflow_completed == False</code>, WAA does not try to execute it through <code>run_workflow</code>.</p>
+<p>Instead, it returns the latest known workflow error from the stored planning state. This makes incomplete workflow reuse safer and easier to debug.</p>
+<h2 id="practical-use">Practical Use</h2>
+<p>Workflow cache is useful when:</p>
+<ul>
+<li>the task description is stable</li>
+<li>input/output schemas are stable</li>
+<li>planning is relatively expensive</li>
+<li>you want repeatable execution across sessions</li>
+</ul>
+<p>This lets WAA act more like a reusable workflow runtime and less like a planner that starts from scratch every time.</p>
 
 
 

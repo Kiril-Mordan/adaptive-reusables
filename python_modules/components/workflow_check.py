@@ -301,7 +301,7 @@ class WorkflowCheck:
                                        "decision" : checked_workflow.workflow_possible})
             retry_i = checked_workflow.retries
             errors = checked_workflow.errors
-            init_error = errors[-1]
+            init_error = errors[-1] if errors else None
             include_input = checked_workflow.include_input
             include_output = checked_workflow.include_output
         

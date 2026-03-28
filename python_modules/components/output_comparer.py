@@ -98,10 +98,12 @@ class OutputComparer:
             self._compare_models(expected, actual, "", diffs)
 
             if workflow:
-                diffs = [{**d, 
-                "output" : workflow[len(workflow)-1]['args'][self._get_source_key(d["path"])],
-                "source_step_id" : self._get_step_id_for_path(path = self._get_source_key(d["path"]), workflow = workflow), 
-                "source" : self.classify_diff_item(path = d["path"], workflow = workflow)} for d in diffs]
+                diffs = [{
+                    **d,
+                    "output": workflow[len(workflow)-1]['args'].get(self._get_source_key(d["path"])),
+                    "source_step_id": self._get_step_id_for_path(path=self._get_source_key(d["path"]), workflow=workflow),
+                    "source": self.classify_diff_item(path=d["path"], workflow=workflow),
+                } for d in diffs]
             return diffs
         finally:
             # Restore instance state
@@ -125,11 +127,11 @@ class OutputComparer:
 
     def _get_step_id_for_path(self,workflow, path):
 
-        output = workflow[len(workflow)-1]['args'][path]
+        output = workflow[len(workflow)-1]['args'].get(path)
 
         step_id = -1
 
-        if isinstance(output, list) or isinstance(output, dict):
+        if output is None or isinstance(output, list) or isinstance(output, dict):
             return step_id
 
         splits = output.split(".")
@@ -198,7 +200,7 @@ class OutputComparer:
 
         app = self._get_dir_source_from_path(workflow = workflow, path = path)
 
-        return workflow[-1]['args'][field] , app
+        return workflow[-1]['args'].get(field), app
 
     def _get_source_key(self, path):
 

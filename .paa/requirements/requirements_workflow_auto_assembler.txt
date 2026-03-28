@@ -1,6 +1,6 @@
 attrsx
-pyyaml
 attrs
 pydantic
+pyyaml
 openai
 ollama

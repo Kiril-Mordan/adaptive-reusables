@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "workflow-auto-assembler"
-version = "0.0.1"
+version = "0.1.0"
 description = "Experimental schema-first workflow synthesis tool for assembling simple typed workflows from existing functions."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -13,6 +13,9 @@ classifiers = ["Development Status :: 3 - Alpha"]
 dependencies = ["attrs", "attrsx", "pydantic", "pyyaml"]
 authors = [{ name = "Kyrylo Mordan", email = "parachute.repo@gmail.com" }]
 license = { text = "apache-2.0" }
+
+[project.urls]
+"Homepage" = "https://kiril-mordan.github.io/adaptive-reusables/workflow_auto_assembler/"
 
 [project.optional-dependencies]
 "ollama" = ["ollama"]

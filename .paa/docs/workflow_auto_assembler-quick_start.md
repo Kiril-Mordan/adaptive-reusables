@@ -63,10 +63,17 @@ class SendReportEmailOutput(BaseModel):
 
 def send_report_email(inputs: SendReportEmailInput) -> SendReportEmailOutput:
     """Sends a report email with given information points to a city."""
-    return SendReportEmailOutput(
-        email_sent = True,
-        message = "Email sent to city of your choosing!"
-    )
+
+    if inputs.city not in ["London", "Berlin"]:
+        return SendReportEmailOutput(
+            email_sent = False,
+            message = f"Email was not sent to {inputs.city}!"
+        )
+    else:
+        return SendReportEmailOutput(
+            email_sent = True,
+            message = f"Email sent to {inputs.city}!"
+        )
 
 # 3. query_database function
 
@@ -129,20 +136,43 @@ class WfInputs(BaseModel):
     city: str = Field(..., description="Name of the city for which weather to be extracted.")
 
 class WfOutputs(BaseModel):
-    city: str = Field(..., description="Name of the city for which weather was extracted.")
-    information: list[EmailInformationPoint] = Field(default=[], description="Information sent via email.")
+    city: str = Field(..., description="Name of the city for which the report email was sent.")
+    email_sent: bool = Field(..., description="Confirmation that the report email was sent.")
+    message: str = Field(None, description="Optional comments from the email sending process.")
+
 ```
 
 ### 3. Plan the workflow
 
-**What this means:** WAA uses the LLM to draft a workflow that connects your tools into a valid plan for the task.
+**What this means:** WAA uses the LLM to draft and validate a workflow that connects your tools into a valid plan for the task.
 
-**What you get back:** an `AssembledWorkflow` object that includes the adapted workflow steps.
+**What you get back:** an `AssembledWorkflow` object that includes the adapted workflow steps and planning state.
+
+**Include tests:** Passing `test_params` is recommended because it lets WAA check the assembled workflow against expected outputs before you reuse it later.
 
 
 
 ```python
 import logging
+
+test_params = [
+    {
+        "inputs": WfInputs(city = "London"),
+        "outputs": WfOutputs(
+            city = "London",
+            email_sent = True,
+            message = "Email sent to London!"
+        )
+    },
+    {
+        "inputs": WfInputs(city = "Berlin"),
+        "outputs": WfOutputs(
+            city = "Berlin",
+            email_sent = True,
+            message = "Email sent to Berlin!"
+        )
+    }
+]
 
 wa = WorkflowAutoAssembler(
     available_functions = available_tools["available_functions"],
@@ -158,11 +188,24 @@ wa = WorkflowAutoAssembler(
 
 wf_obj = await wa.plan_workflow(
     task_description = task_description,
+    test_params = test_params,
     input_model = WfInputs,
     output_model = WfOutputs,
 )
 
 ```
+
+
+```python
+wf_obj.workflow_completed
+```
+
+
+
+
+    True
+
+
 
 
 ```python
@@ -181,17 +224,17 @@ wf_obj.workflow
       'name': 'get_weather',
       'args': {'city': '0.output.city'}},
      {'id': 3,
-      'func_id': '0e2e920002a93f313712e76199c5a1374ecdb59cab74d1a3d1580854c8b60b9a',
+      'func_id': '879952407bf2ea9735064f8069fbd776592f7bd541fcfe0727acdce61c42a94c',
       'name': 'send_report_email',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Birds Information', 'content': '1.output.info'},
-        {'title': 'Weather Condition', 'content': '2.output.condition'}]}},
+       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+        {'title': 'Current Weather', 'content': '2.output.condition'}]}},
      {'id': 4,
-      'func_id': '16a96f6083291385531909618374913abd08df9c4b3bbe0ac81969ae7856887f',
+      'func_id': '6b9d9bfb8778148240bb9f026717e7fb2d524b5eb9561bc69c4efd30847a5e73',
       'name': 'output_model',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Birds Information', 'content': '1.output.info'},
-        {'title': 'Weather Condition', 'content': '2.output.condition'}]}}]
+       'email_sent': '3.output.email_sent',
+       'message': '3.output.message'}}]
 
 
 
@@ -232,9 +275,96 @@ output.model_dump()
 
 
 
-    {'city': 'London',
-     'information': [{'title': 'Birds Information',
-       'content': 'Content extracted from the database for your query is ...'},
-      {'title': 'Weather Condition', 'content': 'Sunny'}]}
+    {'city': 'London', 'email_sent': True, 'message': 'Email sent to London!'}
+
+
+
+### 5. Plan and run workflows with cache
+
+**What this means:** `actualize_workflow` is the high-level entrypoint. It reuses an existing workflow from cache or storage when possible, otherwise it plans one, saves it, caches it, and then runs it. Use `force_replan=True` to skip reuse and force planning again.
+
+
+
+```python
+wa = WorkflowAutoAssembler(
+    available_functions = available_tools["available_functions"],
+    available_callables = available_tools["available_callables"],
+    storage_path = "/tmp", # Optional, otherwise would use some dir in your system
+    llm_handler_params = {
+        "llm_h_type" : "ollama",
+        "llm_h_params" : {
+            "connection_string": "http://localhost:11434",
+            "model_name": "gpt-oss:20b"
+        }
+    }
+)
+
+output = await wa.actualize_workflow(
+    task_description = task_description,
+    input_model = WfInputs,
+    output_model = WfOutputs,
+    run_inputs = WfInputs(city = "London")
+)
+
+
+output.model_dump()
+
+```
+
+
+
+
+    {'city': 'London', 'email_sent': True, 'message': 'Email sent to London!'}
+
+
+
+Force replanning instead of reusing cache/storage
+
+
+```python
+test_params = [
+    {
+        "inputs": WfInputs(city = "London"),
+        "outputs": WfOutputs(
+            city = "London",
+            email_sent = True,
+            message = "Email sent to London!"
+        )
+    },
+    {
+        "inputs": WfInputs(city = "Berlin"),
+        "outputs": WfOutputs(
+            city = "Berlin",
+            email_sent = True,
+            message = "Email sent to Berlin!"
+        )
+    },
+    {
+        "inputs": WfInputs(city = "Sydney"),
+        "outputs": WfOutputs(
+            city = "Sydney",
+            email_sent = False,
+            message = "Email sent to Sydney!"
+        )
+    }
+]
+
+output = await wa.actualize_workflow(
+    task_description = task_description,
+    input_model = WfInputs,
+    output_model = WfOutputs,
+    run_inputs = WfInputs(city = "Sydney"),
+    force_replan = True,
+)
+
+output.model_dump()
+```
+
+
+
+
+    {'city': 'Sydney',
+     'email_sent': False,
+     'message': 'Email was not sent to Sydney!'}
 
 

@@ -21,7 +21,7 @@ __package_metadata__ = {
     "author": "Kyrylo Mordan",
     "author_email": "parachute.repo@gmail.com",
     "description": "Minimal metadata and discovery helpers for typed Python tools used by llm_function runtimes.",
-    "url": "https://kiril-mordan.github.io/adaptive-reusables/llm-function-tools/",
+    "url": "https://kiril-mordan.github.io/adaptive-reusables/llm_function_tools/",
 }
 
 

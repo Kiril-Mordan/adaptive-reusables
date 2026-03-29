@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-function-tools"
-version = "0.0.1"
+version = "0.0.2"
 description = "Minimal metadata and discovery helpers for typed Python tools used by llm_function runtimes."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -15,7 +15,7 @@ authors = [{ name = "Kyrylo Mordan", email = "parachute.repo@gmail.com" }]
 license = { text = "apache-2.0" }
 
 [project.urls]
-"Homepage" = "https://kiril-mordan.github.io/adaptive-reusables/llm-function-tools/"
+"Homepage" = "https://kiril-mordan.github.io/adaptive-reusables/llm_function_tools/"
 
 [tool.setuptools]
 license-files = ["LICENSE", "NOTICE"]

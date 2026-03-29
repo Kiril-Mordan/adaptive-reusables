@@ -22,5 +22,6 @@ around large language models. It exists to explore the author's ideas about LLM-
  
 Links to the extended documentation of packaged modules, available through gh-pages:
  
+- [![MkDocs](https://img.shields.io/static/v1?label=&message=Llm-function&color=darkgreen&logo=mkdocs)](https://kiril-mordan.github.io/adaptive-reusables/llm_function) [![PyPiVersion](https://img.shields.io/pypi/v/llm-function)](https://pypi.org/project/llm-function/) 
 - [![MkDocs](https://img.shields.io/static/v1?label=&message=Llm-function-tools&color=darkgreen&logo=mkdocs)](https://kiril-mordan.github.io/adaptive-reusables/llm_function_tools) [![PyPiVersion](https://img.shields.io/pypi/v/llm-function-tools)](https://pypi.org/project/llm-function-tools/) 
 - [![MkDocs](https://img.shields.io/static/v1?label=&message=Workflow-auto-assembler&color=darkgreen&logo=mkdocs)](https://kiril-mordan.github.io/adaptive-reusables/workflow_auto_assembler) [![PyPiVersion](https://img.shields.io/pypi/v/workflow-auto-assembler)](https://pypi.org/project/workflow-auto-assembler/) 

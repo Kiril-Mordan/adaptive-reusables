@@ -1,4 +1,4 @@
-pydantic
-attrsx
 attrs
 workflow_auto_assembler
+pydantic
+attrsx

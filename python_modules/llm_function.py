@@ -30,7 +30,7 @@ __package_metadata__ = {
     "author": "Kyrylo Mordan",
     "author_email": "parachute.repo@gmail.com",
     "description": "Llm function is a decorator that uses llm to assemble reusable workflows from available tools to match input and output models.",
-    "url" : 'https://kiril-mordan.github.io/adaptive-reusables/llm-function/',
+    "url" : 'https://kiril-mordan.github.io/adaptive-reusables/llm_function/',
 }
 
 

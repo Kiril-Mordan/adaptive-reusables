@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import json
 import pytest
 
@@ -21,6 +21,11 @@ class OutputModel(BaseModel):
     y: int
 
 
+class DummyFunctionItem:
+    def __init__(self, func_id: str):
+        self.func_id = func_id
+
+
 class EmailInformationPoint(BaseModel):
     title: str
     content: str
@@ -33,6 +38,11 @@ class NestedOutputModel(BaseModel):
 class DummyLogger:
     def debug(self, *args, **kwargs):
         return None
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
 
 
 def _make_storage_wa() -> WorkflowAutoAssembler:
@@ -204,6 +214,84 @@ def test_workflow_storage_load_workflows_to_cache_and_add_to_cache(tmp_path):
     )
     wa.add_workflow_to_cache(manual_workflow)
     assert wa.storage_h.workflow_cache["input-c"].id == "workflow-c"
+
+
+def test_workflow_storage_load_latest_complete_prefers_newest_timestamp_over_workflow_id(tmp_path):
+    wa = _make_storage_wa()
+    workflows_dir = tmp_path / "workflows"
+    workflows_dir.mkdir(parents=True, exist_ok=True)
+
+    older_complete = AssembledWorkflow(
+        id="workflow-z",
+        input_id="shared-input",
+        workflow_completed=True,
+        workflow=[{"id": 1, "name": "old_step", "args": {}}],
+        description=WorkflowDescription(task_description="older complete"),
+        saved_at="20260412T190908926715Z",
+    )
+    newer_complete = AssembledWorkflow(
+        id="workflow-a",
+        input_id="shared-input",
+        workflow_completed=True,
+        workflow=[{"id": 2, "name": "new_step", "args": {}}],
+        description=WorkflowDescription(task_description="newer complete"),
+        saved_at="20260412T221828046590Z",
+    )
+
+    older_path = workflows_dir / f"{older_complete.input_id}_{older_complete.id}_{older_complete.saved_at}.json"
+    newer_path = workflows_dir / f"{newer_complete.input_id}_{newer_complete.id}_{newer_complete.saved_at}.json"
+
+    older_path.write_text(wa.storage_h.serialize_json(older_complete, indent=2), encoding="utf-8")
+    newer_path.write_text(wa.storage_h.serialize_json(newer_complete, indent=2), encoding="utf-8")
+
+    latest_complete = wa.load_latest_workflow("shared-input", str(tmp_path), completed=True)
+
+    assert latest_complete.id == "workflow-a"
+    assert latest_complete.saved_at == "20260412T221828046590Z"
+    assert latest_complete.workflow[0]["name"] == "new_step"
+
+
+def test_workflow_storage_load_workflows_to_cache_skips_incompatible_saved_workflows(tmp_path, monkeypatch):
+    wa = _make_storage_wa()
+    compatible_workflow = AssembledWorkflow(
+        id="workflow-compatible",
+        input_id="compatible-input",
+        workflow_completed=True,
+        workflow=[{"id": 1, "name": "step", "args": {}}],
+        description=WorkflowDescription(task_description="compatible"),
+    )
+    wa.storage_h.save_workflow(compatible_workflow, str(tmp_path))
+
+    original_loader = WorkflowStorage.load_latest_complete_workflow
+
+    def fake_loader(self, *args, **kwargs):
+        input_id = kwargs["input_id"]
+        if input_id == "incompatible-input":
+            raise ValidationError.from_exception_data(
+                "WfOutputs",
+                [
+                    {
+                        "type": "missing",
+                        "loc": ("condition",),
+                        "msg": "Field required",
+                        "input": {"city": "London"},
+                    }
+                ],
+            )
+        return original_loader(self, *args, **kwargs)
+
+    monkeypatch.setattr(WorkflowStorage, "load_latest_complete_workflow", fake_loader)
+
+    loaded = wa.load_workflows_to_cache(
+        storage_path=str(tmp_path),
+        input_ids=["compatible-input", "incompatible-input"],
+        latest_complete=True,
+    )
+
+    assert "compatible-input" in loaded
+    assert "incompatible-input" not in loaded
+    assert "compatible-input" in wa.storage_h.workflow_cache
+    assert "incompatible-input" not in wa.storage_h.workflow_cache
 
 
 def test_workflow_storage_saved_file_contains_timestamp_in_name(tmp_path):
@@ -420,3 +508,55 @@ async def test_actualize_workflow_returns_last_error_when_planned_workflow_is_in
     assert isinstance(result, WorkflowError)
     assert result.error_type == WorkflowErrorType.RUNNER
     assert calls["run"] == 0
+
+
+@pytest.mark.anyio
+async def test_actualize_workflow_replans_and_saves_when_cached_workflow_is_stale(tmp_path, monkeypatch):
+    wa = _make_storage_wa()
+    wa.storage_path = str(tmp_path)
+
+    cached_workflow = AssembledWorkflow(
+        id="workflow-cached-stale",
+        input_id=wa.get_input_id("cached stale task", InputModel, OutputModel),
+        workflow_completed=True,
+        workflow=[{"id": 1, "name": "step", "func_id": "missing_func_id", "args": {}}],
+        description=WorkflowDescription(task_description="cached stale task"),
+    )
+    wa.storage_h.workflow_cache[cached_workflow.input_id] = cached_workflow
+
+    replanned_workflow = AssembledWorkflow(
+        id="workflow-replanned",
+        input_id=cached_workflow.input_id,
+        workflow_completed=True,
+        workflow=[{"id": 1, "name": "step", "args": {}}],
+        description=WorkflowDescription(task_description="cached stale task"),
+    )
+
+    calls = {"plan": 0, "run": 0}
+
+    async def fake_plan_workflow(*args, **kwargs):
+        calls["plan"] += 1
+        return replanned_workflow
+
+    async def fake_run_workflow(*args, **kwargs):
+        calls["run"] += 1
+        return OutputModel(y=11)
+
+    monkeypatch.setattr(WorkflowAutoAssembler, "plan_workflow", fake_plan_workflow)
+    monkeypatch.setattr(WorkflowAutoAssembler, "run_workflow", fake_run_workflow)
+
+    result = await wa.actualize_workflow(
+        task_description="cached stale task",
+        run_inputs=InputModel(x=1),
+        input_model=InputModel,
+        output_model=OutputModel,
+        available_functions=[DummyFunctionItem("current_func_id")],
+        available_callables={},
+    )
+
+    assert result.y == 11
+    assert calls["plan"] == 1
+    assert calls["run"] == 1
+    assert replanned_workflow.input_id in wa.storage_h.workflow_cache
+    assert wa.storage_h.workflow_cache[replanned_workflow.input_id].id == replanned_workflow.id
+    assert list((tmp_path / "workflows").glob(f"{replanned_workflow.input_id}_*.json"))

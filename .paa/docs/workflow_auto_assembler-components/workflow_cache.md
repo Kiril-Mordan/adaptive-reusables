@@ -86,8 +86,8 @@ saved_path, loaded_workflow.id
 
 
 
-    (PosixPath('/tmp/workflows/5101a357c99628ff74cdef1053edefc4af1c018e2c1a0e4f69907bb0f7cb3eb0_1710b456c224457ab445ebfadd0652a3_20260328T182338374545Z.json'),
-     '1710b456c224457ab445ebfadd0652a3')
+    (PosixPath('/tmp/workflows/5101a357c99628ff74cdef1053edefc4af1c018e2c1a0e4f69907bb0f7cb3eb0_c975d8c47b974165bc3829407ace643a_20260412T225457203768Z.json'),
+     'c975d8c47b974165bc3829407ace643a')
 
 
 
@@ -111,8 +111,9 @@ list(cached_workflows.keys())
 
 
 
-    ['5101a357c99628ff74cdef1053edefc4af1c018e2c1a0e4f69907bb0f7cb3eb0',
-     '98d99dff74ad140aa88b3e8205280ce05d9ba3f08e326204b2d3244a1e66602e']
+    ['29ff02651cdded671bb38486e0ed7aa3baa8077219d2db1c812b348b09c773b5',
+     '5101a357c99628ff74cdef1053edefc4af1c018e2c1a0e4f69907bb0f7cb3eb0',
+     '6f16cf276cd92fe07d482ed492d2860b1127c04d94b6c268008f65d4850143ae']
 
 
 
@@ -142,25 +143,81 @@ result.model_dump()
 
 
 
+#### 5. Replan stale cached workflows
+
+If a stored workflow references tool `func_id`s that are no longer available, `actualize_workflow` will discard that stale workflow, replan with the current tools, save the repaired workflow, and then run it.
+
+
 
 ```python
-# Force a fresh plan instead of reusing cache or storage
-result = await wa.actualize_workflow(
-    task_description="Get weather for a city",
+def fetch_weather(inputs):
+    return WeatherOutput(condition="Windy")
+
+stale_task_description = "Get weather for a city (stale cache replan demo)"
+
+stale_workflow = await wa.plan_workflow(
+    task_description=stale_task_description,
+    input_model=WfInputs,
+    output_model=WfOutputs,
+)
+
+wa.save_workflow_to_storage(stale_workflow, storage_path="/tmp")
+
+available_tools_v2 = create_avc_items([
+    LlmFunctionItemInput(func=fetch_weather, input_model=WeatherInput, output_model=WeatherOutput)
+])
+```
+
+
+```python
+wa_replanned = WorkflowAutoAssembler(
+    available_functions=available_tools_v2["available_functions"],
+    available_callables=available_tools_v2["available_callables"],
+    llm_handler_params={
+        "llm_h_type": "ollama",
+        "llm_h_params": {
+            "connection_string": "http://localhost:11434",
+            "model_name": "gpt-oss:20b"
+        }
+    }
+)
+
+replanned_result = await wa_replanned.actualize_workflow(
+    task_description=stale_task_description,
     input_model=WfInputs,
     output_model=WfOutputs,
     run_inputs=WfInputs(city="Berlin"),
     storage_path="/tmp",
-    force_replan=True,
 )
 
-result.model_dump()
-
+replanned_result.model_dump()
 ```
 
 
 
 
-    {'condition': 'Sunny'}
+    {'condition': 'Windy'}
+
+
+
+
+```python
+replanned_workflow = wa_replanned.load_latest_workflow(
+    input_id=wa_replanned.get_input_id(
+        task_description=stale_task_description,
+        input_model=WfInputs,
+        output_model=WfOutputs,
+    ),
+    storage_path="/tmp",
+    completed=True,
+)
+
+[step["name"] for step in replanned_workflow.workflow]
+```
+
+
+
+
+    ['fetch_weather', 'output_model']
 
 

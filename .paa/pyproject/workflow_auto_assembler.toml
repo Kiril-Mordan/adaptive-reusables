@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "workflow-auto-assembler"
-version = "0.1.0"
+version = "0.1.1"
 description = "Experimental schema-first workflow synthesis tool for assembling simple typed workflows from existing functions."
 readme = "README.md"
 requires-python = ">=3.8"

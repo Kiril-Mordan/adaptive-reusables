@@ -1,5 +1,5 @@
-attrsx
 attrs
+attrsx
 pydantic
 pyyaml
 openai

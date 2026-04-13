@@ -79,7 +79,7 @@ def send_report_email(inputs: SendReportEmailInput) -> SendReportEmailOutput:
 
 class QueryDatabaseInput(BaseModel):
     topic: str = Field(..., description="Topic of a requested piece of information.")
-    location: str = Field(None, description="Filter for location name.")
+    location: str = Field(..., description="Filter for location name.")
     uid: str = Field(None, description="Filter for unique indentifier of the database item.")
 
 class QueryDatabaseOutput(BaseModel):
@@ -89,7 +89,7 @@ class QueryDatabaseOutput(BaseModel):
 def query_database(inputs : QueryDatabaseInput) -> QueryDatabaseOutput:
     """Get information from the database with provided filters."""
     return QueryDatabaseOutput(
-        info = "Content extracted from the database for your query is ...",
+        info = f"Content extracted from the database for {inputs.topic} in {inputs.location} is ...",
         uid = "0000"
     )
 
@@ -109,10 +109,7 @@ def query_web(inputs : QueryWebInput) -> QueryWebOutput:
         search_results = ["Relevant content found in first search result is ..."],
     )
 
-
-
-# Create structured items for each function
-
+# Create structured items for each function 
 available_tools = create_avc_items(functions = [
     LlmFunctionItemInput(**{"func" : get_weather , "input_model" : GetWeatherInput, "output_model" : GetWeatherOutput}),
     LlmFunctionItemInput(**{"func" : send_report_email , "input_model" : SendReportEmailInput, "output_model" : SendReportEmailOutput}),
@@ -138,6 +135,7 @@ class WfInputs(BaseModel):
 class WfOutputs(BaseModel):
     city: str = Field(..., description="Name of the city for which the report email was sent.")
     email_sent: bool = Field(..., description="Confirmation that the report email was sent.")
+    info : str  = Field(..., description="Information found in the database.")
     message: str = Field(None, description="Optional comments from the email sending process.")
 
 ```
@@ -160,6 +158,7 @@ test_params = [
         "inputs": WfInputs(city = "London"),
         "outputs": WfOutputs(
             city = "London",
+            info = "Content extracted from the database for Birds in London is ...",
             email_sent = True,
             message = "Email sent to London!"
         )
@@ -168,6 +167,7 @@ test_params = [
         "inputs": WfInputs(city = "Berlin"),
         "outputs": WfOutputs(
             city = "Berlin",
+            info = "Content extracted from the database for Birds in Berlin is ...",
             email_sent = True,
             message = "Email sent to Berlin!"
         )
@@ -216,9 +216,9 @@ wf_obj.workflow
 
 
     [{'id': 1,
-      'func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac',
+      'func_id': '358894ca32285be1fba1f3f7b49020b86375ed1bf3d3e9a1b90bf1a17be29ff7',
       'name': 'query_database',
-      'args': {'topic': 'birds'}},
+      'args': {'topic': 'Birds', 'location': '0.output.city'}},
      {'id': 2,
       'func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a',
       'name': 'get_weather',
@@ -227,13 +227,13 @@ wf_obj.workflow
       'func_id': '879952407bf2ea9735064f8069fbd776592f7bd541fcfe0727acdce61c42a94c',
       'name': 'send_report_email',
       'args': {'city': '0.output.city',
-       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
-        {'title': 'Current Weather', 'content': '2.output.condition'}]}},
+       'information': [{'content': '1.output.info'}]}},
      {'id': 4,
-      'func_id': '6b9d9bfb8778148240bb9f026717e7fb2d524b5eb9561bc69c4efd30847a5e73',
+      'func_id': '842ee0f8580f0e6a379e52fc7c551c726797423bf7c1c0cf5eab9e890a225815',
       'name': 'output_model',
       'args': {'city': '0.output.city',
        'email_sent': '3.output.email_sent',
+       'info': '1.output.info',
        'message': '3.output.message'}}]
 
 
@@ -275,7 +275,10 @@ output.model_dump()
 
 
 
-    {'city': 'London', 'email_sent': True, 'message': 'Email sent to London!'}
+    {'city': 'London',
+     'email_sent': True,
+     'info': 'Content extracted from the database for Birds in London is ...',
+     'message': 'Email sent to London!'}
 
 
 
@@ -303,7 +306,7 @@ output = await wa.actualize_workflow(
     task_description = task_description,
     input_model = WfInputs,
     output_model = WfOutputs,
-    run_inputs = WfInputs(city = "London")
+    run_inputs = WfInputs(city = "Berlin")
 )
 
 
@@ -314,7 +317,10 @@ output.model_dump()
 
 
 
-    {'city': 'London', 'email_sent': True, 'message': 'Email sent to London!'}
+    {'city': 'Berlin',
+     'email_sent': True,
+     'info': 'Content extracted from the database for birds in Berlin is ...',
+     'message': 'Email sent to Berlin!'}
 
 
 
@@ -327,6 +333,7 @@ test_params = [
         "inputs": WfInputs(city = "London"),
         "outputs": WfOutputs(
             city = "London",
+            info = "Content extracted from the database for Birds in London is ...",
             email_sent = True,
             message = "Email sent to London!"
         )
@@ -335,6 +342,7 @@ test_params = [
         "inputs": WfInputs(city = "Berlin"),
         "outputs": WfOutputs(
             city = "Berlin",
+            info = "Content extracted from the database for Birds in Berlin is ...",
             email_sent = True,
             message = "Email sent to Berlin!"
         )
@@ -343,6 +351,7 @@ test_params = [
         "inputs": WfInputs(city = "Sydney"),
         "outputs": WfOutputs(
             city = "Sydney",
+            info = "Content extracted from the database for Birds in Sydney is ...",
             email_sent = False,
             message = "Email sent to Sydney!"
         )
@@ -365,6 +374,7 @@ output.model_dump()
 
     {'city': 'Sydney',
      'email_sent': False,
+     'info': 'Content extracted from the database for birds in Sydney is ...',
      'message': 'Email was not sent to Sydney!'}
 
 

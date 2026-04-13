@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../examples/">
+        <link rel="prev" href="../reset_logic/">
       
       
-        <link rel="next" href="../core_ideas/">
+        <link rel="next" href="../examples/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -328,6 +328,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../init_check/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Init check
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../workflow_cache/" class="md-nav__link">
         
   
@@ -370,27 +391,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../adaptor/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Adaptor
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../planner/" class="md-nav__link">
         
   
@@ -412,11 +412,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../init_check/" class="md-nav__link">
+      <a href="../adaptor/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Init check
+    Adaptor
   </span>
   
 
@@ -454,7 +454,7 @@
             
   
   <span class="md-ellipsis">
-    Research notes
+    Concepts
   </span>
   
 
@@ -464,7 +464,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
-            Research notes
+            Concepts
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -475,11 +475,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../01_benchmark_25_example_functions/" class="md-nav__link">
+      <a href="../workflow_cache/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    01 benchmark 25 example functions
+    Workflow cache
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core_ideas/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Core ideas
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reset_logic/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reset logic
   </span>
   
 
@@ -492,26 +534,6 @@
           </ul>
         </nav>
       
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Examples
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -623,6 +645,26 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -638,7 +680,7 @@
             
   
   <span class="md-ellipsis">
-    Concepts
+    Research notes
   </span>
   
 
@@ -648,7 +690,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
-            Concepts
+            Research notes
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -659,53 +701,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../core_ideas/" class="md-nav__link">
+      <a href="../01_benchmark_25_example_functions/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Core ideas
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../workflow_cache/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Workflow cache
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reset_logic/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Reset logic
+    01 benchmark 25 example functions
   </span>
   
 
@@ -879,7 +879,7 @@ def send_report_email(inputs: SendReportEmailInput) -&gt; SendReportEmailOutput:
 
 class QueryDatabaseInput(BaseModel):
     topic: str = Field(..., description=&quot;Topic of a requested piece of information.&quot;)
-    location: str = Field(None, description=&quot;Filter for location name.&quot;)
+    location: str = Field(..., description=&quot;Filter for location name.&quot;)
     uid: str = Field(None, description=&quot;Filter for unique indentifier of the database item.&quot;)
 
 class QueryDatabaseOutput(BaseModel):
@@ -889,7 +889,7 @@ class QueryDatabaseOutput(BaseModel):
 def query_database(inputs : QueryDatabaseInput) -&gt; QueryDatabaseOutput:
     &quot;&quot;&quot;Get information from the database with provided filters.&quot;&quot;&quot;
     return QueryDatabaseOutput(
-        info = &quot;Content extracted from the database for your query is ...&quot;,
+        info = f&quot;Content extracted from the database for {inputs.topic} in {inputs.location} is ...&quot;,
         uid = &quot;0000&quot;
     )
 
@@ -909,10 +909,7 @@ def query_web(inputs : QueryWebInput) -&gt; QueryWebOutput:
         search_results = [&quot;Relevant content found in first search result is ...&quot;],
     )
 
-
-
-# Create structured items for each function
-
+# Create structured items for each function 
 available_tools = create_avc_items(functions = [
     LlmFunctionItemInput(**{&quot;func&quot; : get_weather , &quot;input_model&quot; : GetWeatherInput, &quot;output_model&quot; : GetWeatherOutput}),
     LlmFunctionItemInput(**{&quot;func&quot; : send_report_email , &quot;input_model&quot; : SendReportEmailInput, &quot;output_model&quot; : SendReportEmailOutput}),
@@ -931,6 +928,7 @@ class WfInputs(BaseModel):
 class WfOutputs(BaseModel):
     city: str = Field(..., description=&quot;Name of the city for which the report email was sent.&quot;)
     email_sent: bool = Field(..., description=&quot;Confirmation that the report email was sent.&quot;)
+    info : str  = Field(..., description=&quot;Information found in the database.&quot;)
     message: str = Field(None, description=&quot;Optional comments from the email sending process.&quot;)
 
 </code></pre>
@@ -945,6 +943,7 @@ test_params = [
         &quot;inputs&quot;: WfInputs(city = &quot;London&quot;),
         &quot;outputs&quot;: WfOutputs(
             city = &quot;London&quot;,
+            info = &quot;Content extracted from the database for Birds in London is ...&quot;,
             email_sent = True,
             message = &quot;Email sent to London!&quot;
         )
@@ -953,6 +952,7 @@ test_params = [
         &quot;inputs&quot;: WfInputs(city = &quot;Berlin&quot;),
         &quot;outputs&quot;: WfOutputs(
             city = &quot;Berlin&quot;,
+            info = &quot;Content extracted from the database for Birds in Berlin is ...&quot;,
             email_sent = True,
             message = &quot;Email sent to Berlin!&quot;
         )
@@ -986,9 +986,9 @@ wf_obj = await wa.plan_workflow(
 <pre><code class="language-python">wf_obj.workflow
 </code></pre>
 <pre><code>[{'id': 1,
-  'func_id': '7dcdbc070e6f7634effda970c2c0490e368f56b98a10c1a404d662ea176029ac',
+  'func_id': '358894ca32285be1fba1f3f7b49020b86375ed1bf3d3e9a1b90bf1a17be29ff7',
   'name': 'query_database',
-  'args': {'topic': 'birds'}},
+  'args': {'topic': 'Birds', 'location': '0.output.city'}},
  {'id': 2,
   'func_id': '5f1173f2ce5662c1502e33d637c0b45efa42576300eea222a130ee3169089b4a',
   'name': 'get_weather',
@@ -997,13 +997,13 @@ wf_obj = await wa.plan_workflow(
   'func_id': '879952407bf2ea9735064f8069fbd776592f7bd541fcfe0727acdce61c42a94c',
   'name': 'send_report_email',
   'args': {'city': '0.output.city',
-   'information': [{'title': 'Bird Information', 'content': '1.output.info'},
-    {'title': 'Current Weather', 'content': '2.output.condition'}]}},
+   'information': [{'content': '1.output.info'}]}},
  {'id': 4,
-  'func_id': '6b9d9bfb8778148240bb9f026717e7fb2d524b5eb9561bc69c4efd30847a5e73',
+  'func_id': '842ee0f8580f0e6a379e52fc7c551c726797423bf7c1c0cf5eab9e890a225815',
   'name': 'output_model',
   'args': {'city': '0.output.city',
    'email_sent': '3.output.email_sent',
+   'info': '1.output.info',
    'message': '3.output.message'}}]
 </code></pre>
 <h3 id="4-run-the-workflow-later">4. Run the workflow later</h3>
@@ -1032,7 +1032,10 @@ output = await wa.run_workflow(
 output.model_dump()
 
 </code></pre>
-<pre><code>{'city': 'London', 'email_sent': True, 'message': 'Email sent to London!'}
+<pre><code>{'city': 'London',
+ 'email_sent': True,
+ 'info': 'Content extracted from the database for Birds in London is ...',
+ 'message': 'Email sent to London!'}
 </code></pre>
 <h3 id="5-plan-and-run-workflows-with-cache">5. Plan and run workflows with cache</h3>
 <p><strong>What this means:</strong> <code>actualize_workflow</code> is the high-level entrypoint. It reuses an existing workflow from cache or storage when possible, otherwise it plans one, saves it, caches it, and then runs it. Use <code>force_replan=True</code> to skip reuse and force planning again.</p>
@@ -1053,14 +1056,17 @@ output = await wa.actualize_workflow(
     task_description = task_description,
     input_model = WfInputs,
     output_model = WfOutputs,
-    run_inputs = WfInputs(city = &quot;London&quot;)
+    run_inputs = WfInputs(city = &quot;Berlin&quot;)
 )
 
 
 output.model_dump()
 
 </code></pre>
-<pre><code>{'city': 'London', 'email_sent': True, 'message': 'Email sent to London!'}
+<pre><code>{'city': 'Berlin',
+ 'email_sent': True,
+ 'info': 'Content extracted from the database for birds in Berlin is ...',
+ 'message': 'Email sent to Berlin!'}
 </code></pre>
 <p>Force replanning instead of reusing cache/storage</p>
 <pre><code class="language-python">test_params = [
@@ -1068,6 +1074,7 @@ output.model_dump()
         &quot;inputs&quot;: WfInputs(city = &quot;London&quot;),
         &quot;outputs&quot;: WfOutputs(
             city = &quot;London&quot;,
+            info = &quot;Content extracted from the database for Birds in London is ...&quot;,
             email_sent = True,
             message = &quot;Email sent to London!&quot;
         )
@@ -1076,6 +1083,7 @@ output.model_dump()
         &quot;inputs&quot;: WfInputs(city = &quot;Berlin&quot;),
         &quot;outputs&quot;: WfOutputs(
             city = &quot;Berlin&quot;,
+            info = &quot;Content extracted from the database for Birds in Berlin is ...&quot;,
             email_sent = True,
             message = &quot;Email sent to Berlin!&quot;
         )
@@ -1084,6 +1092,7 @@ output.model_dump()
         &quot;inputs&quot;: WfInputs(city = &quot;Sydney&quot;),
         &quot;outputs&quot;: WfOutputs(
             city = &quot;Sydney&quot;,
+            info = &quot;Content extracted from the database for Birds in Sydney is ...&quot;,
             email_sent = False,
             message = &quot;Email sent to Sydney!&quot;
         )
@@ -1102,6 +1111,7 @@ output.model_dump()
 </code></pre>
 <pre><code>{'city': 'Sydney',
  'email_sent': False,
+ 'info': 'Content extracted from the database for birds in Sydney is ...',
  'message': 'Email was not sent to Sydney!'}
 </code></pre>
 

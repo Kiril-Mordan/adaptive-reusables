@@ -190,6 +190,18 @@ class WorkflowRunner:  # pylint: disable=not-callable
 
         return create_model(schema["title"], **fields)
 
+    def _get_available_functions_by_id(self, available_functions: List[Any]) -> Dict[str, Any]:
+
+        """
+        Index available function definitions by func_id.
+        """
+
+        return {
+            func_item.func_id: func_item
+            for func_item in available_functions
+            if getattr(func_item, "func_id", None) is not None
+        }
+
     def _run_single_case(self, 
         workflow : List[dict], 
         inputs : Type[BaseModel] = None,
@@ -222,6 +234,7 @@ class WorkflowRunner:  # pylint: disable=not-callable
             compare_params = {}
 
         workflow = workflow.copy()
+        available_functions_by_id = self._get_available_functions_by_id(available_functions)
 
         outputs = {}
 
@@ -256,16 +269,31 @@ class WorkflowRunner:  # pylint: disable=not-callable
 
 
             if workflow_item["name"] != "output_model":
-                
-                try:
-                    func_item = [av for av in available_functions \
-                        if av.func_id == workflow_item["func_id"]][0]
-                except (IndexError, KeyError, TypeError, ValueError) as e:
-                    error_message = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-                    error_type = self.workflow_error_types.PLANNING_HF
+                func_id = workflow_item.get("func_id")
+                func_item = available_functions_by_id.get(func_id)
+                if func_item is None:
                     error = self.workflow_error(
-                        error_message = error_message,
-                        error_type = error_type
+                        error_message = "Workflow references a function id that is not available in the current toolset.",
+                        error_type = self.workflow_error_types.PLANNING_HF,
+                        additional_info = {
+                            "step_id": workflow_item["id"],
+                            "func_id": func_id,
+                            "func_name": workflow_item["name"],
+                            "available_func_ids": sorted(available_functions_by_id.keys()),
+                        },
+                    )
+                    break
+
+                if func_id not in available_callables:
+                    error = self.workflow_error(
+                        error_message = "Workflow references a function id that has no callable in the current toolset.",
+                        error_type = self.workflow_error_types.PLANNING_HF,
+                        additional_info = {
+                            "step_id": workflow_item["id"],
+                            "func_id": func_id,
+                            "func_name": workflow_item["name"],
+                            "available_callable_ids": sorted(available_callables.keys()),
+                        },
                     )
                     break
 
@@ -285,7 +313,7 @@ class WorkflowRunner:  # pylint: disable=not-callable
 
                 output_struct = self._run_func(
                     func_name = workflow_item["name"],
-                    func = available_callables[workflow_item["func_id"]],
+                    func = available_callables[func_id],
                     inputs = func_inputs
                 )
                 
@@ -314,6 +342,19 @@ class WorkflowRunner:  # pylint: disable=not-callable
 
 
             outputs[str(workflow_item["id"])] = output
+
+        if error is None and workflow:
+            final_step_id = str(workflow[-1]["id"])
+            if final_step_id not in outputs:
+                error = self.workflow_error(
+                    error_message="Workflow execution did not produce the final workflow output.",
+                    error_type=self.workflow_error_types.OUTPUTS_FAILURE,
+                    additional_info={
+                        "step_id": workflow[-1]["id"],
+                        "final_step_id": final_step_id,
+                        "available_output_ids": list(outputs.keys()),
+                    },
+                )
 
         if expected_outputs is not None and error is None:
 

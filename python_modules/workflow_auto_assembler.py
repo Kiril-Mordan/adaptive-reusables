@@ -175,10 +175,17 @@ class WorkflowAutoAssembler:
 
         return str(base_dir / "workflow_auto_assembler")
 
-    def _update_reset_logic(self, wa_resp : AssembledWorkflow):
+    def _update_reset_logic(self, wa_resp : AssembledWorkflow, expect_tester_result: bool = False):
 
         tester_error = None
-        if wa_resp.planning.tester is not None:
+        if wa_resp.planning.tester is None and expect_tester_result:
+            tester_error = self.workflow_error(
+                error_message="Workflow execution did not produce tester results.",
+                error_type=WorkflowErrorType.RUNNER,
+                additional_info={"stage": "update_reset_logic"},
+            )
+            wa_resp.planning.testing_errors.append(tester_error)
+        elif wa_resp.planning.tester is not None:
             tester_error = wa_resp.planning.tester.error
 
         if tester_error is None:
@@ -192,6 +199,7 @@ class WorkflowAutoAssembler:
         self.logger.debug(f"Updating reset logic based on error: {tester_error}",
                           label = tester_error.error_type.name,
                           save_vars = ["wa_resp.planning.tester.error"])
+        wa_resp.workflow_completed = False
 
         if tester_error.additional_info and isinstance(tester_error.additional_info, dict):
             if "differences_by_case" in tester_error.additional_info and "differences" not in tester_error.additional_info:
@@ -289,7 +297,8 @@ class WorkflowAutoAssembler:
             wa_resp.planning.adaptor_rerun_needed = True
 
         wa_resp.planning.testing_errors.append(tester_error)
-        wa_resp.planning.tester.error = None
+        if wa_resp.planning.tester is not None:
+            wa_resp.planning.tester.error = None
 
         return wa_resp
 
@@ -399,6 +408,17 @@ class WorkflowAutoAssembler:
 
                 if wa_resp.workflow_possible is False:
                     self.logger.warning("Workflow planning is not possible!")
+                    wa_resp.planning.testing_errors.append(
+                        self.workflow_error(
+                            error_message=wa_resp.init_check.justification or "Workflow planning is not possible.",
+                            error_type=None,
+                            additional_info={
+                                "stage": "init_check",
+                                "workflow_possible": False,
+                                "justification": wa_resp.init_check.justification,
+                            },
+                        )
+                    )
                     wa_resp.planning.planner_rerun_needed = False
                     wa_resp.planning.adaptor_rerun_needed = False
                     wa_resp.workflow_completed = False
@@ -426,14 +446,20 @@ class WorkflowAutoAssembler:
                     adapted_workflow=wa_resp.planning.adaptor,
                 )
 
-            can_test = wa_resp.planning.adaptor is not None and (
+            executable_workflow = None
+            if wa_resp.planning.adaptor is not None:
+                executable_workflow = wa_resp.planning.adaptor.workflow
+            elif wa_resp.workflow is not None:
+                executable_workflow = wa_resp.workflow
+
+            can_test = executable_workflow is not None and (
                 not ensure_init_check or (wa_resp.init_check is not None and wa_resp.init_check.workflow_possible)
             )
 
             if can_test and test_params is not None:
 
                 wa_resp.planning.tester = self.runner_h.run_workflow(
-                    workflow=wa_resp.planning.adaptor.workflow,
+                    workflow=executable_workflow,
                     test_params=test_params,
                     compare_params=compare_params,
                     output_model=output_model,
@@ -446,7 +472,7 @@ class WorkflowAutoAssembler:
             if can_test and run_inputs is not None:
 
                 wa_resp.planning.tester = self.runner_h.run_workflow(
-                    workflow=wa_resp.planning.adaptor.workflow,
+                    workflow=executable_workflow,
                     inputs=run_inputs,
                     output_model=output_model,
                     available_functions=available_functions,
@@ -457,7 +483,10 @@ class WorkflowAutoAssembler:
                 else:
                     task_description = wa_resp.description.task_description
 
-            wa_resp = self._update_reset_logic(wa_resp=wa_resp)
+            wa_resp = self._update_reset_logic(
+                wa_resp=wa_resp,
+                expect_tester_result=(test_params is not None or run_inputs is not None),
+            )
 
             if wa_resp.workflow_completed:
                 break
@@ -572,7 +601,49 @@ class WorkflowAutoAssembler:
             run_inputs=run_inputs,
         )
 
-        return wa_resp.planning.tester.outputs[str(len(wa_resp.planning.tester.outputs)-1)]
+        if wa_resp.workflow_completed is False:
+            last_error = self._get_last_workflow_error(wa_resp)
+            if last_error is not None:
+                return last_error
+
+            return self.workflow_error(
+                error_message="Workflow execution failed without a recorded terminal error.",
+                error_type=None,
+                additional_info={"stage": "run_workflow"},
+            )
+
+        tester = wa_resp.planning.tester
+
+        if tester is None:
+            return self.workflow_error(
+                error_message="Workflow execution did not produce runner results.",
+                error_type=None,
+                additional_info={"stage": "run_workflow"},
+            )
+
+        if getattr(tester, "error", None) is not None:
+            return tester.error
+
+        if not wa_resp.workflow:
+            return self.workflow_error(
+                error_message="Workflow execution did not produce a final workflow.",
+                error_type=None,
+                additional_info={"stage": "run_workflow"},
+            )
+
+        final_step_id = str(wa_resp.workflow[-1]["id"])
+        if final_step_id not in tester.outputs:
+            return self.workflow_error(
+                error_message="Workflow execution did not produce the final workflow output.",
+                error_type=None,
+                additional_info={
+                    "stage": "run_workflow",
+                    "final_step_id": final_step_id,
+                    "available_output_ids": list(tester.outputs.keys()),
+                },
+            )
+
+        return tester.outputs[final_step_id]
 
     async def actualize_workflow(
         self,
@@ -604,7 +675,10 @@ class WorkflowAutoAssembler:
         )
         self.logger.debug(f"Actualizing workflow for input_id={input_id}")
 
+        used_cached_workflow = False
         workflow_object = None if force_replan else self.storage_h.workflow_cache.get(input_id)
+        if workflow_object is not None:
+            used_cached_workflow = True
 
         if workflow_object is None:
             if force_replan:
@@ -617,6 +691,7 @@ class WorkflowAutoAssembler:
                     completed=True,
                 )
                 if workflow_object is not None:
+                    used_cached_workflow = True
                     self.logger.debug(f"Workflow found in storage for input_id={input_id}")
 
         if workflow_object is None:
@@ -643,11 +718,51 @@ class WorkflowAutoAssembler:
         else:
             self.logger.debug(f"Workflow found in cache for input_id={input_id}")
 
+        if (
+            used_cached_workflow
+            and workflow_object is not None
+            and workflow_object.workflow_completed
+            and self._workflow_has_missing_func_ids(
+                workflow_object=workflow_object,
+                available_functions=available_functions,
+            )
+        ):
+            self.logger.debug(f"Cached workflow for input_id={input_id} references missing function ids. Replanning before execution.")
+            workflow_object = await self.plan_workflow(
+                task_description=task_description,
+                test_params=test_params,
+                compare_params=compare_params,
+                input_model=input_model,
+                output_model=output_model,
+                available_functions=available_functions,
+                available_callables=available_callables,
+                max_retry=max_retry,
+                reset_loops=reset_loops,
+            )
+            saved_path = self.save_workflow_to_storage(
+                workflow_object=workflow_object,
+                storage_path=storage_path,
+            )
+            self.add_workflow_to_cache(workflow_object)
+            self.logger.debug(f"Replanned workflow saved to {saved_path}")
+
         if workflow_object.workflow_completed is False:
             self.logger.debug(f"Workflow for input_id={input_id} is incomplete. Returning last known error.")
-            return self._get_last_workflow_error(workflow_object)
+            last_error = self._get_last_workflow_error(workflow_object)
+            if last_error is not None:
+                return last_error
 
-        return await self.run_workflow(
+            return self.workflow_error(
+                error_message="Workflow planning failed without a recorded terminal error.",
+                error_type=None,
+                additional_info={
+                    "stage": "actualize_workflow",
+                    "input_id": input_id,
+                    "workflow_possible": workflow_object.workflow_possible,
+                },
+            )
+
+        result = await self.run_workflow(
             workflow_object=workflow_object,
             task_description=task_description,
             run_inputs=run_inputs,
@@ -658,6 +773,60 @@ class WorkflowAutoAssembler:
             max_retry=max_retry,
             reset_loops=reset_loops,
         )
+
+        if (
+            used_cached_workflow
+            and not force_replan
+            and isinstance(result, WorkflowError)
+            and result.error_type is WorkflowErrorType.PLANNING_HF
+        ):
+            self.logger.debug(f"Cached workflow for input_id={input_id} is stale. Replanning and persisting updated workflow.")
+            workflow_object = await self.plan_workflow(
+                task_description=task_description,
+                test_params=test_params,
+                compare_params=compare_params,
+                input_model=input_model,
+                output_model=output_model,
+                available_functions=available_functions,
+                available_callables=available_callables,
+                max_retry=max_retry,
+                reset_loops=reset_loops,
+            )
+            saved_path = self.save_workflow_to_storage(
+                workflow_object=workflow_object,
+                storage_path=storage_path,
+            )
+            self.add_workflow_to_cache(workflow_object)
+            self.logger.debug(f"Replanned workflow saved to {saved_path}")
+
+            if workflow_object.workflow_completed is False:
+                last_error = self._get_last_workflow_error(workflow_object)
+                if last_error is not None:
+                    return last_error
+
+                return self.workflow_error(
+                    error_message="Workflow replanning failed without a recorded terminal error.",
+                    error_type=None,
+                    additional_info={
+                        "stage": "actualize_workflow",
+                        "input_id": input_id,
+                        "workflow_possible": workflow_object.workflow_possible,
+                    },
+                )
+
+            return await self.run_workflow(
+                workflow_object=workflow_object,
+                task_description=task_description,
+                run_inputs=run_inputs,
+                input_model=input_model,
+                output_model=output_model,
+                available_functions=available_functions,
+                available_callables=available_callables,
+                max_retry=max_retry,
+                reset_loops=reset_loops,
+            )
+
+        return result
 
     def add_workflow_to_cache(self, workflow_object: AssembledWorkflow) -> AssembledWorkflow:
 
@@ -731,3 +900,35 @@ class WorkflowAutoAssembler:
             input_ids=input_ids,
             latest_complete=latest_complete,
         )
+
+    def _workflow_has_missing_func_ids(
+        self,
+        workflow_object: AssembledWorkflow,
+        available_functions: Optional[List[LlmFunctionItem]] = None,
+    ) -> bool:
+
+        """
+        Return True when a workflow references non-output function ids unavailable in the current toolset.
+        """
+
+        if workflow_object is None or not workflow_object.workflow:
+            return False
+
+        if available_functions is None:
+            available_functions = getattr(self, "available_functions", None)
+
+        if available_functions is None:
+            return False
+
+        available_func_ids = {
+            func_item.func_id
+            for func_item in available_functions
+            if getattr(func_item, "func_id", None) is not None
+        }
+        workflow_func_ids = {
+            workflow_item.get("func_id")
+            for workflow_item in workflow_object.workflow
+            if workflow_item.get("name") != "output_model"
+        }
+
+        return bool(workflow_func_ids - available_func_ids)

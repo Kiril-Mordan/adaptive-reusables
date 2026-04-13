@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from python_modules.components.workflow_adaptor import WorkflowAdaptorResponse
 from python_modules.components.workflow_planner import WorkflowPlannerResponse
-from python_modules.components.workflow_runner import TestedWorkflow
+from python_modules.components.workflow_runner import TestedWorkflow, WorkflowRunner
 from python_modules.components.workflow_check import WorkflowCheckResponse
 from python_modules.components.workflow_check import WorkflowCheck
 from python_modules.components.wa_general_models import WorkflowErrorType, WorkflowError
@@ -28,6 +28,12 @@ def anyio_backend():
 
 class Input(BaseModel):
     x: int
+
+
+class DummyFunctionItem:
+    def __init__(self, func_id: str, input_schema_json: dict):
+        self.func_id = func_id
+        self.input_schema_json = input_schema_json
 
 
 def _make_bare_wa(max_output_unexpected: int = 3) -> WorkflowAutoAssembler:
@@ -132,6 +138,56 @@ def test_reset_logic_runner_error_resets_planner_and_adaptor():
     assert updated.planning.planner.errors[-1].error_type == WorkflowErrorType.RUNNER
 
 
+def test_reset_logic_missing_tester_with_expected_execution_resets_planner_and_adaptor():
+    wa = _make_bare_wa()
+    wa_resp = AssembledWorkflow(id="1", input_id="1")
+    wa_resp.workflow_possible = True
+    wa_resp.planning.planner = WorkflowPlannerResponse(
+        retries=0,
+        workflow=[],
+        init_messages=[],
+        additional_messages=[],
+        errors=[],
+        include_input=True,
+        include_output=True,
+    )
+    wa_resp.planning.adaptor = WorkflowAdaptorResponse(
+        total_retries=0,
+        planned_workflow=[],
+        workflow=[{"id": 1, "name": "step", "args": {}}],
+        all_errors=[],
+        steps=[],
+        include_input=True,
+        include_output=True,
+    )
+    wa_resp.planning.tester = None
+
+    updated = wa._update_reset_logic(wa_resp, expect_tester_result=True)
+
+    assert updated.workflow_completed is False
+    assert updated.planning.planner_rerun_needed is True
+    assert updated.planning.adaptor_rerun_needed is True
+    assert updated.planning.adaptor is None
+    assert updated.planning.planner.errors[-1].error_type == WorkflowErrorType.RUNNER
+
+
+def test_reset_logic_marks_workflow_incomplete_when_cached_execution_error_occurs():
+    wa = _make_bare_wa()
+    error = WorkflowError(
+        error_message="cached workflow references missing function ids",
+        error_type=WorkflowErrorType.PLANNING_HF,
+        additional_info={"step_id": 1, "func_id": "missing_func_id"},
+    )
+    wa_resp = _make_base_assembled(error)
+    wa_resp.workflow_completed = True
+
+    updated = wa._update_reset_logic(wa_resp)
+
+    assert updated.workflow_completed is False
+    assert updated.planning.planner_rerun_needed is True
+    assert updated.planning.adaptor_rerun_needed is True
+
+
 class DummyCheck:
     async def check_workflow(self, *args, **kwargs):
         return WorkflowCheckResponse(
@@ -167,6 +223,8 @@ async def test_plan_workflow_stops_when_not_possible():
     assert wa_resp.workflow_completed is False
     assert wa_resp.planning.planner_rerun_needed is False
     assert wa_resp.planning.adaptor_rerun_needed is False
+    assert wa._get_last_workflow_error(wa_resp) is not None
+    assert wa._get_last_workflow_error(wa_resp).error_message == "Not possible with provided tools."
 
 
 @pytest.mark.anyio
@@ -197,3 +255,93 @@ async def test_workflow_check_resume_with_empty_errors_does_not_crash():
 
     assert result.workflow_possible is False
     assert result.justification == "Not possible with provided tools."
+
+
+def test_runner_returns_planning_hf_when_workflow_func_id_is_missing():
+    runner = WorkflowRunner.__new__(WorkflowRunner)
+    runner.workflow_error_types = WorkflowErrorType
+    runner.workflow_error = WorkflowError
+    runner.available_functions = None
+    runner.available_callables = None
+
+    workflow = [
+        {"id": 1, "name": "step_a", "func_id": "missing_func_id", "args": {"x": "0.output.x"}},
+        {"id": 2, "name": "output_model", "args": {"y": 1}},
+    ]
+
+    available_functions = [
+        DummyFunctionItem(
+            func_id="other_func_id",
+            input_schema_json={
+                "title": "OtherInput",
+                "type": "object",
+                "properties": {
+                    "x": {"title": "X", "type": "integer"},
+                },
+                "required": ["x"],
+            },
+        )
+    ]
+
+    result = runner._run_single_case(
+        workflow=workflow,
+        inputs=Input(x=1),
+        available_functions=available_functions,
+        available_callables={"other_func_id": lambda inputs: inputs},
+    )
+
+    assert result.error is not None
+    assert result.error.error_type == WorkflowErrorType.PLANNING_HF
+    assert result.error.additional_info["step_id"] == 1
+    assert result.error.additional_info["func_id"] == "missing_func_id"
+    assert result.error.additional_info["func_name"] == "step_a"
+
+
+@pytest.mark.anyio
+async def test_run_workflow_returns_last_recorded_error_after_failed_execution_loop(monkeypatch):
+    wa = _make_bare_wa()
+    recorded_error = WorkflowError(
+        error_message="cached workflow references missing function ids",
+        error_type=WorkflowErrorType.PLANNING_HF,
+        additional_info={"step_id": 1, "func_id": "missing_func_id"},
+    )
+
+    async def _fake_execute_workflow_loop(self, **kwargs):
+        wa_resp = kwargs["wa_resp"]
+        wa_resp.workflow_completed = False
+        wa_resp.planning.testing_errors.append(recorded_error)
+        if wa_resp.planning.tester is not None:
+            wa_resp.planning.tester.error = None
+        return wa_resp
+
+    class DummyRunner:
+        @staticmethod
+        def json_schema_to_base_model(schema):
+            return Input
+
+    monkeypatch.setattr(WorkflowAutoAssembler, "_execute_workflow_loop", _fake_execute_workflow_loop)
+    wa.runner_h = DummyRunner()
+
+    workflow_object = AssembledWorkflow(
+        id="1",
+        input_id="1",
+        workflow_completed=True,
+        workflow=[{"id": 1, "name": "step_a", "func_id": "missing_func_id", "args": {}}],
+    )
+    workflow_object.description.input_model_json = Input.model_json_schema()
+    workflow_object.description.output_model_json = Input.model_json_schema()
+    workflow_object.planning.tester = TestedWorkflow(
+        workflow=[],
+        inputs=Input(x=1),
+        outputs={"0": Input(x=1)},
+        error=None,
+    )
+
+    result = await wa.run_workflow(
+        workflow_object=workflow_object,
+        run_inputs=Input(x=1),
+        input_model=Input,
+        output_model=Input,
+    )
+
+    assert result is recorded_error

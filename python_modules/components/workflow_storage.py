@@ -12,7 +12,7 @@ from typing import Any
 
 import attrs
 import attrsx
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, Field, ValidationError, create_model
 
 
 class SerializedWorkflowPayload(BaseModel):
@@ -45,7 +45,13 @@ class WorkflowStorage:
         return workflows_dir
 
     def _sort_candidate_paths(self, paths: list[Path]) -> list[Path]:
-        return sorted(paths, key=lambda path: path.name, reverse=True)
+        def _sort_key(path: Path) -> tuple[str, str]:
+            parts = path.stem.rsplit("_", 2)
+            if len(parts) == 3:
+                return parts[2], path.name
+            return "", path.name
+
+        return sorted(paths, key=_sort_key, reverse=True)
 
     def _serialize_value(self, value: Any) -> Any:
         if isinstance(value, BaseModel):
@@ -318,18 +324,17 @@ class WorkflowStorage:
         model_class = self._resolve_model_class(model_class)
         target_input_ids = input_ids if input_ids is not None else self._discover_input_ids(storage_path=storage_path)
         loader = self.load_latest_complete_workflow if latest_complete else self.load_latest_workflow
-
-        loaded_items = [
-            (
-                input_id,
-                loader(
+        loaded_items = []
+        for input_id in target_input_ids:
+            try:
+                workflow_object = loader(
                     storage_path=storage_path,
                     input_id=input_id,
                     model_class=model_class,
-                ),
-            )
-            for input_id in target_input_ids
-        ]
+                )
+            except (ValidationError, ValueError, TypeError):
+                workflow_object = None
+            loaded_items.append((input_id, workflow_object))
 
         return {
             input_id: workflow_object

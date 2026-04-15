@@ -22,7 +22,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Type, get_type_hints
 
 from pydantic import BaseModel
-from workflow_auto_assembler import WorkflowAutoAssembler
+from workflow_auto_assembler import WorkflowAutoAssembler, WorkflowError #>=0.1.1
 from .components.llm_func_deps.llm_function_config import LlmFunctionConfig, LlmRuntimeConfig
 from .components.llm_func_deps.tool_registry import InMemoryToolSource, ToolRegistry
 
@@ -34,6 +34,81 @@ __package_metadata__ = {
 }
 
 
+class LlmFunctionError(Exception):
+    """
+    Raised when workflow assembly or execution returns a WorkflowError.
+    """
+
+    def __init__(self, workflow_error: WorkflowError):
+        self.workflow_error = workflow_error
+        super().__init__(workflow_error.error_message or "llm_function execution failed.")
+
+
+@attrsx.define(handler_specs={"waa": WorkflowAutoAssembler})
+class LlmFunctionRuntime:
+    available_functions: Optional[List[Any]] = attrs.field(default=None)
+    available_callables: Optional[Dict[str, Callable[..., Any]]] = attrs.field(default=None)
+    tool_registry: Optional[ToolRegistry] = attrs.field(default=None)
+    tool_sources: Optional[List[object]] = attrs.field(default=None)
+    config: Optional[LlmFunctionConfig] = attrs.field(default=None)
+    llm_handler_params: Optional[dict] = attrs.field(default=None)
+    storage_path: Optional[str] = attrs.field(default=None)
+    resolved_tools: Optional[Dict[str, Any]] = attrs.field(default=None, init=False)
+
+    def __attrs_post_init__(self):
+        self._apply_config_defaults()
+
+        if self.llm_handler_params is None:
+            raise ValueError("llm_handler_params is required either directly or via config.")
+
+        self.resolved_tools = self._resolve_available_tools()
+        self._initialize_waa_h(
+            uparams={
+                "available_functions": self.resolved_tools["available_functions"],
+                "available_callables": self.resolved_tools["available_callables"],
+                "storage_path": self.storage_path,
+                "llm_handler_params": self.llm_handler_params,
+            }
+        )
+
+    def _apply_config_defaults(self):
+        if self.config is None:
+            return
+
+        if self.llm_handler_params is None:
+            self.llm_handler_params = self.config.runtime.llm_handler_params
+        if self.storage_path is None:
+            self.storage_path = self.config.runtime.storage_path
+        if self.tool_registry is None:
+            self.tool_registry = self.config.tool_registry
+        if self.tool_sources is None and self.config.tool_sources is not None:
+            self.tool_sources = list(self.config.tool_sources)
+
+    def _resolve_available_tools(self) -> Dict[str, Any]:
+        if self.tool_registry is not None and self.tool_sources is not None:
+            raise ValueError("Use either tool_registry or tool_sources, not both.")
+
+        if self.tool_registry is not None:
+            return self.tool_registry.build_available_tools()
+
+        if self.tool_sources is not None:
+            return ToolRegistry(sources=self.tool_sources).build_available_tools()
+
+        if self.available_functions is None or self.available_callables is None:
+            raise ValueError(
+                "Provide either available_functions and available_callables, or tool_registry/tool_sources."
+            )
+
+        return {
+            "available_functions": self.available_functions,
+            "available_callables": self.available_callables,
+            "resolved_tools": None,
+        }
+
+    async def actualize_workflow(self, **kwargs):
+        return await self.waa_h.actualize_workflow(**kwargs)
+
+
 @attrsx.define
 class LlmFunction:
     available_functions: Optional[List[Any]] = attrs.field(default=None)
@@ -41,6 +116,7 @@ class LlmFunction:
     tool_registry: Optional[ToolRegistry] = attrs.field(default=None)
     tool_sources: Optional[List[object]] = attrs.field(default=None)
     config: Optional[LlmFunctionConfig] = attrs.field(default=None)
+    runtime: Optional[LlmFunctionRuntime] = attrs.field(default=None)
     llm_handler_params: Optional[dict] = attrs.field(default=None)
     storage_path: Optional[str] = attrs.field(default=None)
     force_replan: bool = attrs.field(default=False)
@@ -51,12 +127,37 @@ class LlmFunction:
     resolved_tools: Optional[Dict[str, Any]] = attrs.field(default=None, init=False)
 
     def __attrs_post_init__(self):
+        if self.runtime is not None:
+            self._validate_runtime_inputs()
+            self.resolved_tools = self.runtime.resolved_tools
+            return
+
         self._apply_config_defaults()
 
         if self.llm_handler_params is None:
             raise ValueError("llm_handler_params is required either directly or via config.")
 
         self.resolved_tools = self._resolve_available_tools()
+
+    def _validate_runtime_inputs(self):
+        conflicting_fields = [
+            field_name
+            for field_name in (
+                "available_functions",
+                "available_callables",
+                "tool_registry",
+                "tool_sources",
+                "config",
+                "llm_handler_params",
+                "storage_path",
+            )
+            if getattr(self, field_name) is not None
+        ]
+        if conflicting_fields:
+            raise ValueError(
+                "When runtime is provided, do not also provide tool/runtime configuration fields: "
+                + ", ".join(conflicting_fields)
+            )
 
     def _apply_config_defaults(self):
         if self.config is None:
@@ -136,6 +237,8 @@ class LlmFunction:
         thread.join()
 
         if "value" in error:
+            if isinstance(error["value"], LlmFunctionError):
+                raise LlmFunctionError(error["value"].workflow_error) from None
             raise error["value"]
 
         return result["value"]
@@ -168,24 +271,42 @@ class LlmFunction:
             input_model, output_model, input_name = self._extract_io_models(func)
 
             async def _invoke_async(run_inputs: Any):
-                wa = WorkflowAutoAssembler(
-                    available_functions=self.resolved_tools["available_functions"],
-                    available_callables=self.resolved_tools["available_callables"],
-                    storage_path=self.storage_path,
-                    llm_handler_params=self.llm_handler_params,
-                )
+                if self.runtime is not None:
+                    result = await self.runtime.actualize_workflow(
+                        task_description=task_description,
+                        force_replan=self.force_replan,
+                        run_inputs=self._coerce_run_inputs(input_model=input_model, run_inputs=run_inputs),
+                        test_params=self.test_params,
+                        compare_params=self.compare_params,
+                        input_model=input_model,
+                        output_model=output_model,
+                        max_retry=self.max_retry,
+                        reset_loops=self.reset_loops,
+                    )
+                else:
+                    wa = WorkflowAutoAssembler(
+                        available_functions=self.resolved_tools["available_functions"],
+                        available_callables=self.resolved_tools["available_callables"],
+                        storage_path=self.storage_path,
+                        llm_handler_params=self.llm_handler_params,
+                    )
 
-                return await wa.actualize_workflow(
-                    task_description=task_description,
-                    force_replan=self.force_replan,
-                    run_inputs=self._coerce_run_inputs(input_model=input_model, run_inputs=run_inputs),
-                    test_params=self.test_params,
-                    compare_params=self.compare_params,
-                    input_model=input_model,
-                    output_model=output_model,
-                    max_retry=self.max_retry,
-                    reset_loops=self.reset_loops,
-                )
+                    result = await wa.actualize_workflow(
+                        task_description=task_description,
+                        force_replan=self.force_replan,
+                        run_inputs=self._coerce_run_inputs(input_model=input_model, run_inputs=run_inputs),
+                        test_params=self.test_params,
+                        compare_params=self.compare_params,
+                        input_model=input_model,
+                        output_model=output_model,
+                        max_retry=self.max_retry,
+                        reset_loops=self.reset_loops,
+                    )
+
+                if isinstance(result, WorkflowError):
+                    raise LlmFunctionError(result)
+
+                return result
 
             if inspect.iscoroutinefunction(func):
 
@@ -223,6 +344,7 @@ def llm_function(
     tool_registry: Optional[ToolRegistry] = None,
     tool_sources: Optional[List[object]] = None,
     config: Optional[LlmFunctionConfig] = None,
+    runtime: Optional[LlmFunctionRuntime] = None,
     llm_handler_params: Optional[dict] = None,
     storage_path: Optional[str] = None,
     force_replan: bool = False,
@@ -240,6 +362,7 @@ def llm_function(
         tool_registry=tool_registry,
         tool_sources=tool_sources,
         config=config,
+        runtime=runtime,
         llm_handler_params=llm_handler_params,
         storage_path=storage_path,
         force_replan=force_replan,

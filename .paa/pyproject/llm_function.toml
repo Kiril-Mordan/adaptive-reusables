@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-function"
-version = "0.0.3"
+version = "0.1.0"
 description = "Llm function is a decorator that uses llm to assemble reusable workflows from available tools to match input and output models."
 readme = "README.md"
 requires-python = ">=3.8"
 keywords = ["aa-paa-tool"]
 classifiers = ["Development Status :: 3 - Alpha"]
-dependencies = ["attrs", "attrsx", "pydantic", "workflow_auto_assembler"]
+dependencies = ["attrs", "attrsx", "pydantic", "workflow_auto_assembler>=0.1.1"]
 authors = [{ name = "Kyrylo Mordan", email = "parachute.repo@gmail.com" }]
 license = { text = "apache-2.0" }
 

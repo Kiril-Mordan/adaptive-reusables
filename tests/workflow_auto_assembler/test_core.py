@@ -2,6 +2,8 @@ import pytest
 from pydantic import BaseModel
 
 from python_modules.components.output_comparer import OutputComparer
+from python_modules.components.workflow_check import WorkflowCheck
+from python_modules.components.workflow_planner import WorkflowPlanner
 from python_modules.components.workflow_runner import WorkflowRunner
 from python_modules.components.wa_general_models import (
     LlmFunctionItemInput,
@@ -37,6 +39,27 @@ def add_one(inputs: AddInput) -> AddOutput:
 
 def double(inputs: DoubleInput) -> DoubleOutput:
     return DoubleOutput(z=inputs.y * 2)
+
+
+class DummyLogger:
+    def error(self, *args, **kwargs):
+        return None
+
+
+def _make_bare_planner():
+    planner = WorkflowPlanner.__new__(WorkflowPlanner)
+    planner.workflow_error_types = WorkflowErrorType
+    planner.workflow_error = WorkflowError
+    planner.logger = DummyLogger()
+    return planner
+
+
+def _make_bare_check():
+    checker = WorkflowCheck.__new__(WorkflowCheck)
+    checker.workflow_error_types = WorkflowErrorType
+    checker.workflow_error = WorkflowError
+    checker.logger = DummyLogger()
+    return checker
 
 
 def _make_runner(functions):
@@ -156,6 +179,38 @@ def test_output_comparer_missing_output_mapping_does_not_crash():
     assert diffs[0]["path"] == "message"
     assert diffs[0]["output"] is None
     assert diffs[0]["source_step_id"] == -1
+
+
+def test_workflow_planner_malformed_function_call_list_returns_planning_json():
+    planner = _make_bare_planner()
+    available_functions = create_avc_items([
+        LlmFunctionItemInput(func=add_one, input_model=AddInput, output_model=AddOutput),
+    ])["available_functions"]
+
+    error = planner._check_llm_response(
+        llm_response='["add_one"]',
+        available_functions=available_functions,
+        include_output=False,
+    )
+
+    assert error is not None
+    assert error.error_type == WorkflowErrorType.PLANNING_JSON
+
+
+def test_workflow_check_malformed_function_call_list_returns_check_json():
+    checker = _make_bare_check()
+    available_functions = create_avc_items([
+        LlmFunctionItemInput(func=add_one, input_model=AddInput, output_model=AddOutput),
+    ])["available_functions"]
+
+    error = checker._check_llm_response(
+        llm_response='["add_one"]',
+        available_functions=available_functions,
+        include_output=False,
+    )
+
+    assert error is not None
+    assert error.error_type == WorkflowErrorType.CHECK_JSON
 
 
 def test_workflow_runner_error_surface():

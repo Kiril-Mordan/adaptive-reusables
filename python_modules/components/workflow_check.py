@@ -3,24 +3,22 @@ This module contains a set of tools to check if llm-generated
 workflow for described task based on provided tools is possible.
 """
 
+import asyncio
+import importlib.resources as pkg_resources
+import json
+import os
+import re
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Type
+
 import attrs
 import attrsx
-
 import yaml
-import os
-import json
-import asyncio
-
-import importlib
-import importlib.metadata
-import importlib.resources as pkg_resources
-
-from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, Type
 from pydantic import BaseModel, Field
 
 
-class WorkflowCheckResponse(BaseModel):
+class WorkflowCheckResponse(BaseModel):  # pylint: disable=too-few-public-methods
+    """State returned by the workflow feasibility check."""
 
     retries : int = Field(description = "Number of attempt it took to generate workflow.")
     init_messages : List[dict] = Field(default = None, description = "Initial messages for planning workflow.")
@@ -35,7 +33,8 @@ class WorkflowCheckResponse(BaseModel):
     }
 
 @attrs.define(kw_only=True)
-class LlmHandlerMock(ABC):
+class LlmHandlerMock(ABC):  # pylint: disable=too-few-public-methods
+    """Minimal async chat interface used by the workflow checker."""
 
     @abstractmethod
     async def chat(self, messages: List[Dict[str, str]],  *args, **kwargs):
@@ -43,12 +42,11 @@ class LlmHandlerMock(ABC):
         """
         Abstract chat method for async chat method that passes messages to llm.
         """
-
-        pass
-
+        
 
 @attrsx.define(handler_specs = {"llm" : LlmHandlerMock})
-class WorkflowCheck:
+class WorkflowCheck:  # pylint: disable=too-few-public-methods
+    """Checks whether a described task is feasible with the available tools."""
 
     workflow_error_types = attrs.field()
     workflow_error = attrs.field()
@@ -73,7 +71,12 @@ class WorkflowCheck:
 
         self._assign_prompts()
 
-    def _assign_prompts(self, 
+    def _make_workflow_error(self, error_type, additional_info):
+        """Build a workflow error instance for checker failures."""
+
+        return self.workflow_error(error_type=error_type, additional_info=additional_info)  # pylint: disable=not-callable
+
+    def _assign_prompts(self,  # pylint: disable=too-many-branches
         prompts_filepath : str = None,
         system_message : str = None, 
         system_message_items : Dict[str,str] = None,
@@ -95,7 +98,7 @@ class WorkflowCheck:
                 'workflow_check.yml') as path:
                     prompts_filepath = path
 
-            with open(prompts_filepath, 'r') as f:
+            with open(prompts_filepath, 'r', encoding="utf-8") as f:
                 wp_prompts = yaml.safe_load(f)
 
         if system_message: 
@@ -132,9 +135,13 @@ class WorkflowCheck:
                 output = output.replace("```json", "").replace("```", "")
 
             function_calls = json.loads(output)
-        except Exception as e:
-            self.logger.error(f"Failed to extract json from {output}")
-            return None
+        except json.JSONDecodeError:
+            try:
+                sanitized_output = re.sub(r'\\(?!["\\/bfnrtu])', r"\\\\", output)
+                function_calls = json.loads(sanitized_output)
+            except json.JSONDecodeError:
+                self.logger.error(f"Failed to extract json from {output}")
+                return None
 
         return function_calls
 
@@ -149,7 +156,18 @@ class WorkflowCheck:
 
             afunctions = [afd.name for afd in available_functions]
 
-            hfunctions = [fc['name'] for fc in function_calls if fc['name'] not in afunctions]
+            if not isinstance(function_calls, list):
+                return None, afunctions
+
+            if any(not isinstance(fc, dict) for fc in function_calls):
+                self.logger.error(f"Function calls contain non-dict items: {function_calls}")
+                return None, afunctions
+
+            hfunctions = [fc.get('name') for fc in function_calls if fc.get('name') not in afunctions]
+
+            if [i for i in hfunctions if i is None]:
+                self.logger.error(f"Function call is missing function name: {function_calls}")
+            hfunctions = [i for i in hfunctions if i is not None]
 
             if include_output:
                 hfunctions = [hf for hf in hfunctions if hf != "output_model"]
@@ -216,13 +234,28 @@ class WorkflowCheck:
         if init_error:
             return init_error
 
+        _ = available_functions, include_output
+
         function_calls = self._read_json_output(output=llm_response)
 
         if function_calls is None:
-            return self.workflow_error(error_type = self.workflow_error_types.CHECK_JSON,
-                additional_info = {"llm_response" : llm_response})
+            return self._make_workflow_error(
+                error_type=self.workflow_error_types.CHECK_JSON,
+                additional_info={"llm_response": llm_response},
+            )
 
-        
+        if not isinstance(function_calls, dict):
+            return self._make_workflow_error(
+                error_type=self.workflow_error_types.CHECK_JSON,
+                additional_info={"llm_response": llm_response},
+            )
+
+        if "decision" not in function_calls or "justification" not in function_calls:
+            return self._make_workflow_error(
+                error_type=self.workflow_error_types.CHECK_JSON,
+                additional_info={"llm_response": llm_response},
+            )
+
         return None
 
     async def _get_llm_response(self, messages, n_checks):
@@ -244,7 +277,7 @@ class WorkflowCheck:
 
         return llm_response
 
-    async def check_workflow(
+    async def check_workflow(  # pylint: disable=too-many-branches
         self,
         task_description : str = None, 
         available_functions : list = None, 
@@ -278,7 +311,7 @@ class WorkflowCheck:
 
         if checked_workflow is None:
 
-            self.logger.debug(f"Running initial check...")
+            self.logger.debug("Running initial check...")
         
             init_messages = self._prep_init_messages(
                 available_functions = available_functions, 
@@ -317,7 +350,7 @@ class WorkflowCheck:
 
             if error is None:
                 checked_workflow_items = self._read_json_output(output=llm_response)
-                self.logger.debug(f"Decision from initial check is ready!")
+                self.logger.debug("Decision from initial check is ready!")
                 return WorkflowCheckResponse(
                     errors = errors,
                     retries = retry_i,
@@ -345,7 +378,7 @@ class WorkflowCheck:
 
             
         if retry_i == max_retry:
-            self.logger.warning(f"Initial check ran out of retries!")
+            self.logger.warning("Initial check ran out of retries!")
             return WorkflowCheckResponse(
                 errors = errors,
                 retries = retry_i,

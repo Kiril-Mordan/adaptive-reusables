@@ -1,0 +1,188 @@
+{
+  "per_task": {
+    "overall": {
+      "runs": 10,
+      "completed": 10,
+      "possible": 10,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "natural_log": 2,
+        "add": 4,
+        "exponential": 1,
+        "cube": 1,
+        "absolute_value": 2,
+        "divide": 3,
+        "subtract": 3,
+        "multiply": 3,
+        "square": 1,
+        "square_root": 1
+      },
+      "test_cases_total": 100,
+      "test_cases_failed": 0,
+      "avg_test_retries": 0.3,
+      "avg_workflow_steps": 3.1,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_12": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "natural_log": 2,
+        "add": 1,
+        "exponential": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 5.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_14": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "add": 1,
+        "cube": 1,
+        "absolute_value": 1,
+        "divide": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 5.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_2": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "subtract": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 2.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_3": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "multiply": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 2.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_4": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "divide": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 2.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_5": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "add": 1,
+        "square": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 3.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_6": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "add": 1,
+        "subtract": 1,
+        "multiply": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 4.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_7": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "subtract": 1,
+        "absolute_value": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 3.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_8": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "divide": 1
+      },
+      "avg_test_retries": 3.0,
+      "avg_workflow_steps": 2.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    },
+    "task_9": {
+      "runs": 1,
+      "completed": 1,
+      "possible": 1,
+      "error_type_counts": {},
+      "tool_usage_counts": {
+        "multiply": 1,
+        "square_root": 1
+      },
+      "avg_test_retries": 0.0,
+      "avg_workflow_steps": 3.0,
+      "test_cases_total": 10,
+      "test_cases_failed": 0,
+      "success_rate": 1.0,
+      "test_pass_rate": 1.0
+    }
+  }
+}

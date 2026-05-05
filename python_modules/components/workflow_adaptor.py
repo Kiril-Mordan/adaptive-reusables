@@ -157,9 +157,13 @@ class WorkflowAdaptor:
 
             function_calls = json.loads(output)
         except Exception as e:
-            self.logger.error(f"Failed to extract json from {output}")
-            self.logger.error(f"Problem with JSON: {e}")
-            return None
+            try:
+                sanitized_output = re.sub(r'\\(?!["\\/bfnrtu])', r"\\\\", output)
+                function_calls = json.loads(sanitized_output)
+            except Exception:
+                self.logger.error(f"Failed to extract json from {output}")
+                self.logger.error(f"Problem with JSON: {e}")
+                return None
 
         return function_calls
 
@@ -416,6 +420,68 @@ class WorkflowAdaptor:
 
         return messages, selected_function_input_schema
 
+    def _build_reference_alias_map(
+        self,
+        workflow: List[dict],
+        current_step_id: int,
+    ) -> Dict[str, str]:
+
+        alias_map = {"input_model": "0"}
+        func_counts: Dict[str, int] = {}
+
+        for step in workflow:
+            step_id = step.get("id")
+            step_name = step.get("name")
+
+            if step_id is None or step_name is None:
+                continue
+
+            if step_id >= current_step_id:
+                break
+
+            if step_name == "input_model":
+                continue
+
+            func_counts[step_name] = func_counts.get(step_name, 0) + 1
+            occurrence = func_counts[step_name]
+
+            alias_map[step_name] = str(step_id)
+            alias_map[f"{step_name}_{occurrence}"] = str(step_id)
+            alias_map[f"{step_name}.{occurrence - 1}"] = str(step_id)
+
+        return alias_map
+
+    def _normalize_planned_mapping(
+        self,
+        mapping: Any,
+        workflow: List[dict],
+        current_step_id: int,
+    ) -> Any:
+
+        alias_map = self._build_reference_alias_map(
+            workflow=workflow,
+            current_step_id=current_step_id,
+        )
+
+        def _normalize(value: Any) -> Any:
+            if isinstance(value, dict):
+                return {key: _normalize(item) for key, item in value.items()}
+
+            if isinstance(value, list):
+                return [_normalize(item) for item in value]
+
+            if isinstance(value, str) and value.startswith("source: "):
+                ref = value.replace("source: ", "", 1)
+                if ".output." in ref:
+                    ref_source, field_name = ref.split(".output.", 1)
+                    if ref_source in alias_map:
+                        return f"{alias_map[ref_source]}.output.{field_name}"
+                return ref
+
+            return value
+
+        return _normalize(mapping)
+
     def _check_llm_response(self,
         llm_response : str, 
         step_id : str,
@@ -530,6 +596,35 @@ class WorkflowAdaptor:
                 not_json_output = True
                 errors = []
                 init_error = None
+                planned_step = [step for step in workflow if str(step.get("id")) == str(step_id)][0]
+                normalized_planned_mapping = self._normalize_planned_mapping(
+                    mapping=planned_step.get("args"),
+                    workflow=workflow,
+                    current_step_id=step_id,
+                )
+
+                deterministic_error = self._check_llm_response(
+                    llm_response=json.dumps(normalized_planned_mapping),
+                    step_id=step_id,
+                    target_schema=target_schema,
+                    state=workflow_current_state_schema,
+                    id_func_mapping=id_func_mapping,
+                    current_function=func_name,
+                    init_error=init_error,
+                )
+
+                if deterministic_error is None:
+                    return WorkflowAdaptorStep(
+                        step_id = step_id,
+                        func_name = func_name,
+                        errors = errors,
+                        adapted_schema = normalized_planned_mapping,
+                        state_schema = workflow_current_state_schema,
+                        target_schema = target_schema,
+                        retries = retry_i,
+                        init_messages = init_messages,
+                        additional_messages = [],
+                    )
 
                 response = await self.llm_h.chat(init_messages)
                 llm_response = response.message.content
@@ -537,11 +632,14 @@ class WorkflowAdaptor:
             else:
                 step_id = adapted_step.step_id
                 init_messages = adapted_step.init_messages
-                additional_messages = adapted_step.additional_messages
-                llm_response = json.dumps(additional_messages[-1].get("content", {}))
+                additional_messages = adapted_step.additional_messages or []
+                if additional_messages:
+                    llm_response = json.dumps(additional_messages[-1].get("content", {}))
+                else:
+                    llm_response = json.dumps(adapted_step.adapted_schema)
                 retry_i = adapted_step.retries
                 errors = adapted_step.errors
-                init_error = errors[-1]
+                init_error = errors[-1] if errors else None
                 target_schema = adapted_step.target_schema
                 func_name = adapted_step.func_name
 

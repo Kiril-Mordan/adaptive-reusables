@@ -1,7 +1,5 @@
 # 01. Benchmark: 25 Example Functions
 
-### Note Metadata
-
 - Date: 2026-03-15
 - Status: draft
 

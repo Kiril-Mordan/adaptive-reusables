@@ -227,7 +227,8 @@ wf_obj.workflow
       'func_id': '879952407bf2ea9735064f8069fbd776592f7bd541fcfe0727acdce61c42a94c',
       'name': 'send_report_email',
       'args': {'city': '0.output.city',
-       'information': [{'content': '1.output.info'}]}},
+       'information': [{'title': 'Bird Information', 'content': '1.output.info'},
+        {'title': 'Current Weather', 'content': '2.output.condition'}]}},
      {'id': 4,
       'func_id': '842ee0f8580f0e6a379e52fc7c551c726797423bf7c1c0cf5eab9e890a225815',
       'name': 'output_model',
@@ -374,7 +375,7 @@ output.model_dump()
 
     {'city': 'Sydney',
      'email_sent': False,
-     'info': 'Content extracted from the database for birds in Sydney is ...',
+     'info': 'Content extracted from the database for Birds in Sydney is ...',
      'message': 'Email was not sent to Sydney!'}
 
 

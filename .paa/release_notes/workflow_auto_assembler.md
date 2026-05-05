@@ -1,5 +1,11 @@
 # Release notes
 
+### 0.1.2
+
+    - document math benchmark results
+
+    - fix small check/adaptor edge cases
+
 ### 0.1.1
 
     - fix stale workflow cache reuse

@@ -1,0 +1,203 @@
+[
+  {
+    "task_id": "task_12",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 5,
+    "tools_used": [
+      "natural_log",
+      "natural_log",
+      "add",
+      "exponential"
+    ],
+    "duration_s": 89.3728,
+    "repeat_idx": 0,
+    "description": "Multiply two positive numbers, but do it through logarithms and exponentiation rather than a direct multiply tool."
+  },
+  {
+    "task_id": "task_14",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 5,
+    "tools_used": [
+      "add",
+      "cube",
+      "absolute_value",
+      "divide"
+    ],
+    "duration_s": 87.1873,
+    "repeat_idx": 0,
+    "description": "Build a cubic interaction score by adding a and b, cubing the result, and dividing by the magnitude of c."
+  },
+  {
+    "task_id": "task_2",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 2,
+    "tools_used": [
+      "subtract"
+    ],
+    "duration_s": 85.7117,
+    "repeat_idx": 0,
+    "description": "Subtract right from left and return the difference."
+  },
+  {
+    "task_id": "task_3",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 2,
+    "tools_used": [
+      "multiply"
+    ],
+    "duration_s": 103.2613,
+    "repeat_idx": 0,
+    "description": "Multiply left and right and return the product."
+  },
+  {
+    "task_id": "task_4",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 2,
+    "tools_used": [
+      "divide"
+    ],
+    "duration_s": 79.7722,
+    "repeat_idx": 0,
+    "description": "Divide left by right and return the quotient."
+  },
+  {
+    "task_id": "task_5",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 3,
+    "tools_used": [
+      "add",
+      "square"
+    ],
+    "duration_s": 57.83,
+    "repeat_idx": 0,
+    "description": "First add left and right, then square the result."
+  },
+  {
+    "task_id": "task_6",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 4,
+    "tools_used": [
+      "add",
+      "subtract",
+      "multiply"
+    ],
+    "duration_s": 104.6708,
+    "repeat_idx": 0,
+    "description": "Compute (left + right) multiplied by (left - right)."
+  },
+  {
+    "task_id": "task_7",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 3,
+    "tools_used": [
+      "subtract",
+      "absolute_value"
+    ],
+    "duration_s": 67.269,
+    "repeat_idx": 0,
+    "description": "Return the distance between the two numbers on the real line."
+  },
+  {
+    "task_id": "task_8",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 3,
+    "planner_resets": 3,
+    "adaptor_resets": 3,
+    "workflow_steps": 2,
+    "tools_used": [
+      "divide"
+    ],
+    "duration_s": 180.988,
+    "repeat_idx": 0,
+    "description": "Compute sin(x)^2 plus cos(x)^2 for the provided x."
+  },
+  {
+    "task_id": "task_9",
+    "workflow_possible": true,
+    "workflow_completed": true,
+    "error_type": null,
+    "error_message": null,
+    "test_cases_total": 10,
+    "test_cases_failed": 0,
+    "test_retries": 0,
+    "planner_resets": 0,
+    "adaptor_resets": 0,
+    "workflow_steps": 3,
+    "tools_used": [
+      "multiply",
+      "square_root"
+    ],
+    "duration_s": 69.9218,
+    "repeat_idx": 0,
+    "description": "Compute the geometric mean of two positive numbers by multiplying them first and then taking the square root."
+  }
+]

@@ -10,6 +10,7 @@ import importlib.metadata
 import importlib.resources as pkg_resources
 import json
 import os
+import re
 from typing import List, Optional, Dict, Any, Type
 
 import attrs
@@ -133,8 +134,12 @@ class WorkflowPlanner:
 
             function_calls = json.loads(output)
         except Exception as e:
-            self.logger.error(f"Failed to extract json from {output}")
-            return None
+            try:
+                sanitized_output = re.sub(r'\\(?!["\\/bfnrtu])', r"\\\\", output)
+                function_calls = json.loads(sanitized_output)
+            except Exception:
+                self.logger.error(f"Failed to extract json from {output}")
+                return None
 
         return function_calls
 
@@ -148,6 +153,13 @@ class WorkflowPlanner:
         if function_calls:
 
             afunctions = [afd.name for afd in available_functions]
+
+            if not isinstance(function_calls, list):
+                return None, afunctions
+
+            if any(not isinstance(fc, dict) for fc in function_calls):
+                self.logger.error(f"Function calls contain non-dict items: {function_calls}")
+                return None, afunctions
 
             hfunctions = [fc.get('name')  for fc in function_calls if fc.get('name', "") not in afunctions]
 
@@ -240,7 +252,7 @@ class WorkflowPlanner:
                 additional_info = {"llm_response" : llm_response})
 
         if include_output:
-            if "output_model" not in [fc["name"] for fc in function_calls]:
+            if "output_model" not in [fc.get("name") for fc in function_calls if isinstance(fc, dict)]:
                 return self.workflow_error(error_type = self.workflow_error_types.PLANNING_MISSOUTPUT,
                 additional_info = {"llm_response" : llm_response})
             output_steps = [fc for fc in function_calls if fc.get("name") == "output_model"]
